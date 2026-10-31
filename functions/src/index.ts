@@ -24,10 +24,13 @@ function getDeps(): Deps {
 functions.http('api', async (req, res) => {
   const headers: Record<string, string | undefined> = {};
   for (const [k, v] of Object.entries(req.headers)) headers[k] = Array.isArray(v) ? v[0] : v;
+  const started = Date.now();
   try {
     const out = await handleRequest({ method: req.method, path: req.path, headers, body: req.body }, getDeps());
     res.status(out.status).json(out.body);
   } catch {
+    // Fixed event only: never log the error message or request content.
+    createLogger().error({ endpoint: 'unknown', status: 500, latencyMs: Date.now() - started, codeHash: null, reason: 'internal' });
     res.status(500).json({ error: 'internal' });
   }
 });

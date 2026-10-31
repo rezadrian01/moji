@@ -52,6 +52,8 @@ gcloud functions deploy api \
   --set-env-vars MOJI_MODEL=<nama-model>,MOJI_VERTEX_LOCATION=global,MOJI_PER_CODE_LIMIT=50,MOJI_GLOBAL_LIMIT=1000
 ```
 
+Build: `package.json` `main` menunjuk `dist/index.js`, sedangkan `dist/` tidak ikut di-upload. Karena itu ada script `gcp-build` (`tsc -p tsconfig.build.json`): Cloud Build menginstal `dependencies` dan `devDependencies` lebih dulu (per dokumentasi buildpacks Node.js Google Cloud), lalu hanya menjalankan `gcp-build`, sehingga TypeScript dikompilasi di sana. `.gcloudignore` mengecualikan `node_modules`, test, dan file lokal, tetapi tetap menyertakan `src/`, `tsconfig.json`, dan `tsconfig.build.json`. Jangan hapus `typescript` dan `@types/node` dari devDependencies.
+
 `--allow-unauthenticated` aman karena akses dijaga kode undangan di dalam function. URL hasil deploy menjadi `EXPO_PUBLIC_API_URL` di app.
 
 ## Kode undangan

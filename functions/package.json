@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "gcp-build": "tsc -p tsconfig.build.json",
     "start": "functions-framework --target=api",
     "invites": "tsc -p tsconfig.build.json && node dist/admin/invites.js"
   },

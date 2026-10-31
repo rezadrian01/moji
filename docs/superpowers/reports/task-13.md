@@ -12,3 +12,11 @@ Notes:
 - `generateInviteCodes` has an extra optional 4th param `prefix` (default 'R').
 - Firestore/Vertex wiring in index.ts and the CLI main are not unit-tested.
 - Added `functions/tsconfig.build.json` (needed to exclude tests from build).
+
+## Fix round 1
+- Docs check (docs.cloud.google.com/docs/buildpacks/nodejs): with `gcp-build`, dependencies AND devDependencies are installed first, then only `npm run gcp-build` runs. So typescript/@types/node stay in devDependencies.
+- Added `gcp-build` script, `functions/.gcloudignore` (excludes node_modules, dist, tests, local files; keeps src and tsconfig*), README deploy section updated.
+- New `src/deploy.test.ts` (gcp-build present, .gcloudignore does not exclude src/tsconfig).
+- admin/invites.ts: `store.list()` called once; loops until n unique codes; `runCli` takes an injectable `rand`; collision test added.
+- index.ts catch logs fixed LogEvent (reason 'internal').
+- Command: `npx vitest run` + `npm run typecheck` + `npm run build` (results below in commit message summary: 11 files, 112 tests pass; typecheck and build clean).

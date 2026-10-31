@@ -46,4 +46,19 @@ describe('runCli', () => {
     expect(listed).toHaveLength(3);
     expect(await runCli(['bogus'], store, () => {})).toBe(1);
   });
+
+  it('retries on collisions so exactly n new codes are created', async () => {
+    const { MemoryInviteStore } = await import('../invites/memoryStore.js');
+    const { runCli } = await import('./invites.js');
+    const store = new MemoryInviteStore();
+    await store.create({ code: 'MOJI-R02-AAAA', active: true, label: null, createdAt: 'x' });
+    // First 4 draws give suffix AAAA (collides with the existing R02 code), then 0.5.
+    const draws = [0, 0, 0, 0];
+    const rand = () => draws.shift() ?? 0.5;
+    const out: string[] = [];
+    expect(await runCli(['create', '1'], store, (s) => out.push(s), rand)).toBe(0);
+    expect(out).toHaveLength(2);
+    expect(out[1]).not.toContain('AAAA');
+    expect(await store.list()).toHaveLength(2);
+  });
 });

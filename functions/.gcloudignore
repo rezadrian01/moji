@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.test.ts
+vitest.config.ts
+.git
+.gitignore
+.env*
+*.log
+coverage/
+README.md

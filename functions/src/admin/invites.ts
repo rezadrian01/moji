@@ -27,7 +27,12 @@ export function generateInviteCodes(n: number, startIndex: number, rand: () => n
 
 const secureRand = () => randomInt(0, 2 ** 30) / 2 ** 30;
 
-export async function runCli(argv: string[], store: InviteStore, print: (s: string) => void): Promise<number> {
+export async function runCli(
+  argv: string[],
+  store: InviteStore,
+  print: (s: string) => void,
+  rand: () => number = secureRand,
+): Promise<number> {
   const [cmd, ...rest] = argv;
   if (cmd === 'create') {
     const n = Number(rest[0]);
@@ -42,8 +47,16 @@ export async function runCli(argv: string[], store: InviteStore, print: (s: stri
       return 1;
     }
     const existing = new Set((await store.list()).map((r) => r.code));
-    const start = (await store.list()).length + 1;
-    const codes = generateInviteCodes(n, start, secureRand, prefix).filter((c) => !existing.has(c));
+    const start = existing.size + 1;
+    const codes: string[] = [];
+    for (let i = 0; i < n; i++) {
+      let code: string;
+      do {
+        code = generateInviteCodes(1, start + i, rand, prefix)[0]!;
+      } while (existing.has(code));
+      existing.add(code);
+      codes.push(code);
+    }
     print('label,code');
     const now = new Date().toISOString();
     for (const [i, code] of codes.entries()) {
