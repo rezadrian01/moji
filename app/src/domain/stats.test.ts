@@ -142,6 +142,32 @@ describe('computeStats', () => {
     ]);
   });
 
+  it("counts 'sedikit' as helpful and rated; 'tidak' only as rated", () => {
+    const s = computeStats(
+      [
+        entry({ mood: 3, createdAt: '2026-11-09T08:00:00+07:00', copings: [cop('coping.menulis', 'sedikit')] }),
+        entry({ mood: 3, createdAt: '2026-11-08T08:00:00+07:00', copings: [cop('coping.menulis', 'ya')] }),
+        entry({ mood: 3, createdAt: '2026-11-07T08:00:00+07:00', copings: [cop('coping.menulis', 'tidak')] }),
+      ],
+      'all',
+      NOW,
+    );
+    expect(s.helpfulCopings).toEqual([{ tag: 'coping.menulis', label: 'menulis', helped: 2, rated: 3 }]);
+    expect(describeStats(s)).toContain('Kamu menandai menulis membantu 2 dari 3 kali.');
+  });
+
+  it('excludes entries dated after now', () => {
+    const s = computeStats(
+      [
+        entry({ mood: 3, createdAt: '2026-11-09T08:00:00+07:00' }),
+        entry({ mood: 3, createdAt: '2026-11-11T08:00:00+07:00' }),
+      ],
+      'all',
+      NOW,
+    );
+    expect(s.entryCount).toBe(1);
+  });
+
   it('frequentExperiences returns at most 3 per dimension, by count', () => {
     const tags = ['emosi.sedih', 'emosi.cemas', 'emosi.marah', 'emosi.lega'];
     const entries = tags.flatMap((t, i) =>

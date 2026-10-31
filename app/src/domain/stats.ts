@@ -1,6 +1,6 @@
 import { CONTEXTS, EXPERIENCES, MOOD_LABELS, labelForTag } from './taxonomy';
 import { localDateKey, startOfLocalDay } from './period';
-import type { ContextCategory, Entry, ExperienceDimension, Mood } from './types';
+import type { ContextCategory, CopingHelped, Entry, ExperienceDimension, Mood } from './types';
 
 export type StatsRange = '7d' | '30d' | 'all';
 
@@ -16,6 +16,9 @@ export interface PersonalStats {
 
 const MOODS: Mood[] = [1, 2, 3, 4, 5];
 const RANGE_DAYS: Record<'7d' | '30d', number> = { '7d': 7, '30d': 30 };
+
+/** Aturan R4: "membantu" = ya atau sedikit (sama dengan pattern engine). */
+const isHelpful = (h: CopingHelped) => h === 'ya' || h === 'sedikit';
 
 export function rangeStart(range: StatsRange, now: Date): Date | null {
   if (range === 'all') return null;
@@ -56,7 +59,7 @@ export function computeStats(entries: Entry[], range: StatsRange, now: Date): Pe
       if (c.helped === 'belum_tahu') continue;
       const r = cop.get(c.tag) ?? { helped: 0, rated: 0 };
       r.rated += 1;
-      if (c.helped === 'ya') r.helped += 1;
+      if (isHelpful(c.helped)) r.helped += 1;
       cop.set(c.tag, r);
     }
 
