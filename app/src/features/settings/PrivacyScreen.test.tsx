@@ -34,6 +34,11 @@ it('menjelaskan apa yang disimpan dan apa yang dikirim', async () => {
   expect(screen.getByText(/Simpan file ini kalau kamu mau ganti HP atau menghapus aplikasi\./)).toBeTruthy();
 });
 
+it('memakai teks izin AI yang sama dengan onboarding', async () => {
+  expect(await screen.findByText('Server MOJI tidak menyimpan tulisanmu.')).toBeTruthy();
+  expect(screen.getByText('Kamu bisa mematikannya kapan saja di Pengaturan.')).toBeTruthy();
+});
+
 it('mengekspor data lewat share sheet', async () => {
   await fireEvent.press(await screen.findByLabelText('Ekspor data'));
   expect(shareExport).toHaveBeenCalledWith(db, expect.any(Date));
