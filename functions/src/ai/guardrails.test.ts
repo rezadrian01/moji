@@ -54,6 +54,42 @@ const good: WriteInsightResponse = {
   questions: ['Menurutmu, apa yang paling membebani pekan ini?'],
 };
 
+describe('substring clinical + pressure rules (fix round 1)', () => {
+  it.each([
+    'kamu mengalami kecemasan',
+    'depresinya terlihat',
+    'mungkin diagnosa',
+    'terasa traumatis',
+    'kamu perlu istirahat',
+    'sebaiknya tidur lebih awal',
+    'ada hari bolong',
+    'kamu wajib cerita',
+    'ini gejala',
+    'dia menderita',
+    'jangan lupa mencatat',
+    'belum mencatat sejak Senin',
+    'beberapa hari terlewat',
+    'streak kamu',
+  ])('rejects %s in any field', (bad) => {
+    expect(insightPassesGuardrails({ ...good, text: bad }, ['p1'])).toBe(false);
+    expect(insightPassesGuardrails({ ...good, patternTexts: { p1: bad } }, ['p1'])).toBe(false);
+    expect(insightPassesGuardrails({ ...good, questions: [bad] }, ['p1'])).toBe(false);
+  });
+
+  it('accepts a clean warm insight', () => {
+    expect(
+      insightPassesGuardrails(
+        {
+          text: 'Sepertinya pekan ini terasa cukup berat buatmu. Bisa jadi ada beberapa hal yang menumpuk.',
+          patternTexts: { p1: 'Kamu pernah bilang pola ini kurang pas, jadi anggap ini dugaan saja.' },
+          questions: ['Hal kecil apa yang terasa sedikit meringankan akhir-akhir ini?'],
+        },
+        ['p1'],
+      ),
+    ).toBe(true);
+  });
+});
+
 describe('insightPassesGuardrails', () => {
   it('accepts clean output', () => {
     expect(insightPassesGuardrails(good, ['p1'])).toBe(true);

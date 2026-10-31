@@ -62,7 +62,12 @@ export function createVertexGeminiClient(cfg: Config, sdk?: GenAiLike): GeminiCl
         if (res.promptFeedback?.blockReason) return { ok: false, reason: 'blocked' };
         const finish = res.candidates?.[0]?.finishReason;
         if (finish && BLOCKING_FINISH_REASONS.has(finish)) return { ok: false, reason: 'blocked' };
-        if (!res.text) return { ok: false, reason: 'invalid' };
+        if (!res.text) {
+          // No candidate at all, or a non-STOP finish with no text (e.g. OTHER): treat as
+          // blocked so the analyze path keeps a conservative riskLevel.
+          const noCandidate = !res.candidates || res.candidates.length === 0;
+          return { ok: false, reason: noCandidate || (finish !== undefined && finish !== 'STOP') ? 'blocked' : 'invalid' };
+        }
         let parsed: unknown;
         try {
           parsed = JSON.parse(res.text);

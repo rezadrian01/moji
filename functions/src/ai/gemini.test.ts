@@ -20,6 +20,18 @@ function sdkWith(impl: (p: any) => Promise<any>) {
   return { sdk, spy };
 }
 
+describe('no-candidate responses (fix round 1)', () => {
+  it('maps a response with no candidates and no text to blocked', async () => {
+    const { sdk } = sdkWith(async () => ({}));
+    expect(await createVertexGeminiClient(cfg, sdk).generateJson(req)).toEqual({ ok: false, reason: 'blocked' });
+  });
+
+  it('maps finishReason OTHER with no text to blocked', async () => {
+    const { sdk } = sdkWith(async () => ({ candidates: [{ finishReason: 'OTHER' }] }));
+    expect(await createVertexGeminiClient(cfg, sdk).generateJson(req)).toEqual({ ok: false, reason: 'blocked' });
+  });
+});
+
 describe('createVertexGeminiClient', () => {
   it('throws a clear error when projectId is empty', () => {
     expect(() => createVertexGeminiClient({ ...cfg, projectId: '' }, sdkWith(async () => ({})).sdk)).toThrow(

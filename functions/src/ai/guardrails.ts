@@ -1,10 +1,13 @@
 import type { AnalyzeEntryRequest, AnalyzeEntryResponse, WriteInsightResponse } from '../contract.js';
 
-// Keep in sync with FORBIDDEN_WORDS in the app (Task 8).
+// Binding ruling R9: substring matching on purpose (no \b), so inflections like
+// "depresinya" or "traumatis" are caught. Keep in sync with FORBIDDEN_WORDS in the app (Task 8).
 export const CLINICAL_TERMS =
-  /\b(depresi|depresif|gangguan|bipolar|skizofrenia|psikosis|ptsd|ocd|adhd|anxiety|diagnosis|didiagnosis|mendiagnosis|klinis|patologis|psikiatri|psikiater|mengidap|kelainan jiwa|penyakit mental)\b/i;
+  /depresi|gangguan|diagnos|bipolar|skizo|trauma|klinis|penyakit mental|kecemasan|anxiety|psikosis|ptsd|ocd|adhd|patologis|psikiat|mengidap|menderita|gejala|sakit jiwa|kelainan jiwa/i;
 
-const KAMU_HARUS = /\bkamu\s+harus\b/i;
+// Demand / pressure / streak-shaming language is not allowed in insights.
+export const PRESSURE_TERMS =
+  /kamu\s+(harus|perlu|wajib)|seharusnya|sebaiknya|jangan\s+lupa|streak|hari bolong|tidak mencatat|belum mencatat|terlewat/i;
 
 function pick<T extends string>(raw: readonly T[], allowed: ReadonlySet<string>): T[] {
   const seen = new Set<string>();
@@ -35,5 +38,5 @@ export function insightPassesGuardrails(res: WriteInsightResponse, expectedKeys:
   const keys = Object.keys(res.patternTexts);
   if (keys.length !== expectedKeys.length || !expectedKeys.every((k) => keys.includes(k))) return false;
   const texts = [res.text, ...Object.values(res.patternTexts), ...res.questions];
-  return texts.every((t) => t.trim() !== '' && !CLINICAL_TERMS.test(t) && !KAMU_HARUS.test(t));
+  return texts.every((t) => t.trim() !== '' && !CLINICAL_TERMS.test(t) && !PRESSURE_TERMS.test(t));
 }
