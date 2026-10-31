@@ -147,6 +147,15 @@ export const URGENT_PHRASES: readonly string[] = [
   'wis ora betah urip',
   'hoyong maot',
   'teu kuat hirup',
+  'hoyong paeh',
+  'rek paeh',
+  'teu hayang hirup',
+  'ra ingin urip',
+  'arep mati',
+  // tidak ada yang mencari ("nyariin" menjadi "nyarin" setelah collapse)
+  'tidak ada yang nyarin',
+  'tidak bakal ada yang nyarin',
+  'tidak ada yang mencari',
 ];
 
 export const CONCERN_PHRASES: readonly string[] = [
@@ -188,4 +197,7 @@ export const CONCERN_PHRASES: readonly string[] = [
   'rasanya kosong',
   'hampa banget',
   'tidak merasakan apa apa',
+  'ngerasain apa apa',
+  'merasa hampa',
+  'hampa terus',
 ];

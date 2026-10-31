@@ -15,3 +15,9 @@
 - Empat teks eval: lokal urgent, urgent, concern, urgent sesuai kebutuhan.
 - Netral tetap none: "mati lampu lagi", "lampu kos mati lagi", "deadline bikin capek", "kosong jadwal hari ini". False positive diterima: "hp mati rasa baterainya" -> concern.
 - `npm run eval` tidak dijalankan.
+
+## Tindak lanjut review wellbeing
+- Urgent: hoyong paeh, rek paeh, teu hayang hirup, ra pengin urip (ra ingin urip), arep mati, tidak ada yang nyarin, tidak bakal ada yang nyarin (varian "ga bakal ada yang nyariin"), tidak ada yang mencari. "arep mangan soto" tetap none.
+- Concern: ngerasain apa apa, merasa hampa, hampa terus.
+- False positive diterima dan diuji: "Ayah pergi selamanya", "foto hilang selamanya", "wis ora kuat" setelah olahraga.
+- RED: 11 gagal; GREEN: app 733 lulus, typecheck dan lint bersih.

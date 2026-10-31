@@ -124,6 +124,25 @@ describe('checkLocalSafety', () => {
     ['kosong jadwal hari ini', 'none'],
     ['kantong kosong tanggal tua', 'none'],
     ['rasanya enak banget', 'none'],
+    // review follow-up: regional languages
+    ['abdi hoyong paeh', 'urgent'],
+    ['abdi rek paeh', 'urgent'],
+    ['abdi teu hayang hirup', 'urgent'],
+    ['aku ra pengin urip', 'urgent'],
+    ['aku arep mati', 'urgent'],
+    ['arep mangan soto', 'none'],
+    // review follow-up: nobody looks for me
+    ['gak ada yang nyariin aku', 'urgent'],
+    ['ga bakal ada yang nyariin', 'urgent'],
+    ['gak ada yang mencari aku', 'urgent'],
+    // review follow-up: numbness
+    ['gak ngerasain apa-apa', 'concern'],
+    ['merasa hampa', 'concern'],
+    ['hampa terus', 'concern'],
+    // accepted false positives: grief and lost items (docs/safety-phrases.md)
+    ['Ayah pergi selamanya', 'urgent'],
+    ['foto hilang selamanya', 'urgent'],
+    ['habis lari wis ora kuat', 'urgent'],
     // accepted false positive: documented in docs/safety-phrases.md
     ['hp mati rasa baterainya', 'concern'],
     // accepted false positives (conservative, see docs/safety-phrases.md)
