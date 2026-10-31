@@ -16,6 +16,8 @@ export const SLANG_MAP: Readonly<Record<string, string>> = {
   pengen: 'ingin',
   pgn: 'ingin',
   pingin: 'ingin',
+  pengin: 'ingin',
+  kalo: 'kalau',
   mo: 'ingin',
   aja: 'saja',
   aj: 'saja',
@@ -131,6 +133,29 @@ export const URGENT_PHRASES: readonly string[] = [
   'ingin pergi untuk selamanya',
   'mau pergi untuk selamanya',
   'surat perpisahan',
+  // hilang / pergi selamanya, tidak ada yang mencari
+  'hilang selamanya',
+  'pergi selamanya',
+  'tidak ada yang bakal nyarin',
+  'tidak ada yang bakal kehilangan',
+  // bahasa daerah: Jawa dan Sunda ("pengin mati" menjadi "ingin mati" lewat peta slang)
+  'ra kuat urip',
+  'ora kuat urip',
+  'wis ra kuat',
+  'wis ora kuat',
+  'ora betah urip',
+  'wis ora betah urip',
+  'hoyong maot',
+  'teu kuat hirup',
+  'hoyong paeh',
+  'rek paeh',
+  'teu hayang hirup',
+  'ra ingin urip',
+  'arep mati',
+  // tidak ada yang mencari ("nyariin" menjadi "nyarin" setelah collapse)
+  'tidak ada yang nyarin',
+  'tidak bakal ada yang nyarin',
+  'tidak ada yang mencari',
 ];
 
 export const CONCERN_PHRASES: readonly string[] = [
@@ -167,4 +192,12 @@ export const CONCERN_PHRASES: readonly string[] = [
   'merepotkan semua orang',
   'ingin udahan',
   'mau udahan',
+  // mati rasa / kosong berkepanjangan ("kosong" sendirian sengaja tidak dipakai)
+  'mati rasa',
+  'rasanya kosong',
+  'hampa banget',
+  'tidak merasakan apa apa',
+  'ngerasain apa apa',
+  'merasa hampa',
+  'hampa terus',
 ];

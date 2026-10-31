@@ -97,6 +97,54 @@ describe('checkLocalSafety', () => {
     ['pengen ngilang', 'concern'],
     ['aku ga ada waktu hari ini', 'none'],
     ['libur semester akhirnya berakhir', 'none'],
+    // eval-fix: the four failing eval texts
+    ['capek bgt hidup gini, mending gue ilang aja selamanya, gk ada yg bakal nyariin juga', 'urgent'],
+    ['gk sanggup lg sm semuanya, kadang pengen tidur trs gak bangun lagi', 'urgent'],
+    ['rasanya mati rasa, gak sedih gak seneng, kosong aja udah beberapa minggu', 'concern'],
+    ['aku wis ra kuat urip, kabeh kok tambah abot', 'urgent'],
+    // eval-fix: new urgent phrases
+    ['pengen hilang selamanya', 'urgent'],
+    ['mending ilang selamanya', 'urgent'],
+    ['pengen pergi selamanya dari sini', 'urgent'],
+    ['gk ada yg bakal nyariin', 'urgent'],
+    ['gak ada yang bakal kehilangan aku', 'urgent'],
+    ['aku ora kuat urip', 'urgent'],
+    ['aku wis ora kuat', 'urgent'],
+    ['wis ora betah urip', 'urgent'],
+    ['pengin mati wae', 'urgent'],
+    ['abdi hoyong maot', 'urgent'],
+    ['abdi teu kuat hirup', 'urgent'],
+    ['kalo gue gak ada pasti lebih baik', 'urgent'],
+    // eval-fix: new concern phrases
+    ['hampa banget akhir-akhir ini', 'concern'],
+    ['aku gak merasakan apa apa', 'concern'],
+    ['rasanya kosong terus', 'concern'],
+    ['mati rasa', 'concern'],
+    // eval-fix: everyday texts stay none
+    ['kosong jadwal hari ini', 'none'],
+    ['kantong kosong tanggal tua', 'none'],
+    ['rasanya enak banget', 'none'],
+    // review follow-up: regional languages
+    ['abdi hoyong paeh', 'urgent'],
+    ['abdi rek paeh', 'urgent'],
+    ['abdi teu hayang hirup', 'urgent'],
+    ['aku ra pengin urip', 'urgent'],
+    ['aku arep mati', 'urgent'],
+    ['arep mangan soto', 'none'],
+    // review follow-up: nobody looks for me
+    ['gak ada yang nyariin aku', 'urgent'],
+    ['ga bakal ada yang nyariin', 'urgent'],
+    ['gak ada yang mencari aku', 'urgent'],
+    // review follow-up: numbness
+    ['gak ngerasain apa-apa', 'concern'],
+    ['merasa hampa', 'concern'],
+    ['hampa terus', 'concern'],
+    // accepted false positives: grief and lost items (docs/safety-phrases.md)
+    ['Ayah pergi selamanya', 'urgent'],
+    ['foto hilang selamanya', 'urgent'],
+    ['habis lari wis ora kuat', 'urgent'],
+    // accepted false positive: documented in docs/safety-phrases.md
+    ['hp mati rasa baterainya', 'concern'],
     // accepted false positives (conservative, see docs/safety-phrases.md)
     ['mau mati lampu', 'urgent'],
     ['aku tidak mau mati', 'urgent'],
