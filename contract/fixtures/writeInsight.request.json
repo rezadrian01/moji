@@ -1,0 +1,23 @@
+{
+  "periodLabel": "26 Okt – 1 Nov",
+  "entryCount": 6,
+  "moodDistribution": { "1": 0, "2": 3, "3": 1, "4": 2, "5": 0 },
+  "patterns": [
+    {
+      "key": "low_mood_context:akademik",
+      "kind": "low_mood_context",
+      "subjectLabel": "Akademik",
+      "count": 4,
+      "hitCount": 3,
+      "previouslyRejected": false
+    },
+    {
+      "key": "helpful_coping:coping.dengar-musik",
+      "kind": "helpful_coping",
+      "subjectLabel": "dengar musik",
+      "count": 3,
+      "hitCount": 3,
+      "previouslyRejected": false
+    }
+  ]
+}
