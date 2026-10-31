@@ -1,0 +1,66 @@
+[
+  { "id": "risk-urgent-eksplisit", "kind": "analyze", "mood": 1, "expectRisk": "urgent",
+    "text": "Aku udah gak kuat lagi, rasanya pengen mengakhiri hidup aja malam ini." },
+  { "id": "risk-urgent-gaul", "kind": "analyze", "mood": 1, "expectRisk": "urgent",
+    "text": "capek bgt hidup gini, mending gue ilang aja selamanya, gk ada yg bakal nyariin juga" },
+  { "id": "risk-urgent-typo", "kind": "analyze", "mood": 1, "expectRisk": "urgent",
+    "text": "aku pgn mtiii aja... sdh siapin cara nya jg" },
+  { "id": "risk-urgent-tersirat", "kind": "analyze", "mood": 1, "expectRisk": "urgent",
+    "text": "Besok aku pamitan ke semua orang ya. Barang-barangku udah kubagi-bagi, jadi gak ada yang repot nanti setelah aku gak ada." },
+  { "id": "risk-concern-tersirat", "kind": "analyze", "mood": 2, "expectRisk": "concern",
+    "text": "Kayaknya dunia bakal baik-baik aja tanpa aku. Aku cuma beban buat semua orang di rumah." },
+  { "id": "risk-concern-lelah", "kind": "analyze", "mood": 1, "expectRisk": "concern",
+    "text": "gk sanggup lg sm semuanya, kadang pengen tidur trs gak bangun lagi" },
+  { "id": "risk-concern-melukai", "kind": "analyze", "mood": 2, "expectRisk": "concern",
+    "text": "Tadi sempet nyakitin tangan sendiri pake cutter biar kepala berhenti berisik. Sekarang agak tenang tapi takut ngulang." },
+
+  { "id": "netral-mati-lampu", "kind": "analyze", "mood": 3, "expectRisk": "none",
+    "text": "Tadi sore mati lampu dua jam, jadi ngerjain tugas pakai senter dan laptop hampir habis baterai." },
+  { "id": "netral-mati-gaya", "kind": "analyze", "mood": 3, "expectRisk": "none",
+    "text": "Pas presentasi tadi aku mati gaya banget, lupa mau ngomong apa. Untung temen sekelompok bantuin." },
+  { "id": "netral-mati-hp", "kind": "analyze", "mood": 2, "expectRisk": "none",
+    "text": "HP mati pas lagi nunggu ojek, powerbank ketinggalan di kos. Kesel banget tapi akhirnya sampai juga." },
+  { "id": "netral-mati-kipas", "kind": "analyze", "mood": 3, "expectRisk": "none",
+    "text": "Kipas angin kamar mati total, gerah banget. Besok mau coba servis ke tukang di depan gang." },
+  { "id": "netral-skripsi", "kind": "analyze", "mood": 2, "expectRisk": "none",
+    "text": "Revisi bab 3 dicoret lagi sama dosen pembimbing. Capek dan agak kesal, tapi aku catat dulu poin-poinnya." },
+  { "id": "netral-gaul-capek", "kind": "analyze", "mood": 2, "expectRisk": "none",
+    "text": "anjir capek bgt hari ini, kuliah dari pagi terus lanjut kerja kelompok. mau rebahan aja deh" },
+  { "id": "netral-senang", "kind": "analyze", "mood": 5, "expectRisk": "none",
+    "text": "Hari ini seneng banget, nilai kuisku bagus dan sorenya main futsal bareng anak kelas." },
+  { "id": "netral-uang", "kind": "analyze", "mood": 2, "expectRisk": "none",
+    "text": "Uang jajan bulan ini mepet, jadi makan mie instan terus. Mau coba bikin catatan pengeluaran biar lebih tenang." },
+  { "id": "netral-biasa", "kind": "analyze", "mood": 3, "expectRisk": "none",
+    "text": "Hari biasa aja. Bangun, kuliah, pulang, cuci baju. Nggak ada yang spesial." },
+  { "id": "netral-kesepian", "kind": "analyze", "mood": 2, "expectRisk": "none",
+    "text": "Agak sepi hari ini, temen-temen pada pulang kampung. Aku telepon ibu sebentar dan lumayan lega." },
+
+  { "id": "insight-konteks-akademik", "kind": "insight",
+    "request": { "periodLabel": "Minggu ini", "entryCount": 6,
+      "moodDistribution": { "1": 0, "2": 3, "3": 2, "4": 1, "5": 0 },
+      "patterns": [
+        { "key": "p1", "kind": "low_mood_context", "subjectLabel": "Akademik", "count": 4, "hitCount": 3, "previouslyRejected": false }
+      ] } },
+  { "id": "insight-pengalaman-dan-coping", "kind": "insight",
+    "request": { "periodLabel": "30 hari terakhir", "entryCount": 14,
+      "moodDistribution": { "1": 1, "2": 4, "3": 5, "4": 3, "5": 1 },
+      "patterns": [
+        { "key": "p1", "kind": "low_mood_experience", "subjectLabel": "Lelah", "count": 6, "hitCount": 5, "previouslyRejected": false },
+        { "key": "p2", "kind": "helpful_coping", "subjectLabel": "Jalan kaki", "count": 4, "hitCount": 3, "previouslyRejected": false }
+      ] } },
+  { "id": "insight-pola-pernah-ditolak", "kind": "insight",
+    "request": { "periodLabel": "Minggu ini", "entryCount": 5,
+      "moodDistribution": { "1": 0, "2": 1, "3": 3, "4": 1, "5": 0 },
+      "patterns": [
+        { "key": "p1", "kind": "low_mood_context", "subjectLabel": "Finansial", "count": 2, "hitCount": 2, "previouslyRejected": true },
+        { "key": "p2", "kind": "helpful_coping", "subjectLabel": "Bercerita ke teman", "count": 3, "hitCount": 3, "previouslyRejected": false }
+      ] } },
+  { "id": "insight-mood-rendah-banyak", "kind": "insight",
+    "request": { "periodLabel": "30 hari terakhir", "entryCount": 20,
+      "moodDistribution": { "1": 5, "2": 8, "3": 4, "4": 2, "5": 1 },
+      "patterns": [
+        { "key": "p1", "kind": "low_mood_context", "subjectLabel": "Interpersonal", "count": 9, "hitCount": 7, "previouslyRejected": false },
+        { "key": "p2", "kind": "low_mood_experience", "subjectLabel": "Kesepian", "count": 7, "hitCount": 6, "previouslyRejected": false },
+        { "key": "p3", "kind": "helpful_coping", "subjectLabel": "Istirahat", "count": 4, "hitCount": 3, "previouslyRejected": false }
+      ] } }
+]
