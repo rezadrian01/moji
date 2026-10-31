@@ -14,6 +14,13 @@ describe('konfigurasi rilis', () => {
     expect(app.expo.plugins).toContain('expo-updates');
   });
 
+  it('expo-build-properties mengizinkan cleartext Android untuk http://localhost (mode demo lokal)', () => {
+    const entry = app.expo.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-build-properties') as
+      | [string, { android?: { usesCleartextTraffic?: boolean } }]
+      | undefined;
+    expect(entry?.[1].android?.usesCleartextTraffic).toBe(true);
+  });
+
   it('profil preview menghasilkan APK dan punya channel preview', () => {
     expect(eas.build.preview.android.buildType).toBe('apk');
     expect(eas.build.preview.channel).toBe('preview');
