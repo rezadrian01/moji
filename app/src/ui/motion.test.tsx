@@ -1,22 +1,9 @@
 import { renderHook } from '@testing-library/react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import * as Reanimated from 'react-native-reanimated';
 
 import { useCalmMotion } from './motion';
 
-// The shared reanimated mock needs the worklets runtime, which is unavailable under Jest,
-// so this suite stubs only the three symbols motion.ts uses.
-jest.mock('react-native-reanimated', () => {
-  const anim: Record<string, unknown> = {};
-  anim.duration = () => anim;
-  anim.easing = () => anim;
-  return {
-    FadeIn: anim,
-    Easing: { out: (f: unknown) => f, quad: (t: number) => t },
-    useReducedMotion: jest.fn(),
-  };
-});
-
-const mockReduced = useReducedMotion as jest.Mock;
+const mockReduced = jest.spyOn(Reanimated, 'useReducedMotion');
 
 describe('useCalmMotion', () => {
   it('reduce motion -> no entering animation and 0ms', async () => {

@@ -7,7 +7,6 @@ import { createEntry, listEntries } from './entriesRepo';
 import { emitDataChanged } from './events';
 import { DbContext, useDb, useDbQuery } from './useDbQuery';
 
-jest.mock('expo-crypto', () => ({ randomUUID: () => globalThis.crypto.randomUUID() }));
 
 let db: Db;
 beforeEach(async () => {

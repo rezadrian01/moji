@@ -35,4 +35,14 @@ describe('Chip', () => {
     );
     expect(screen.getByLabelText('Kuliah, disarankan')).toBeOnTheScreen();
   });
+
+  it('shows visible "disarankan" text only for suggested, unselected chips', async () => {
+    await render(
+      <ThemeProvider>
+        <Chip label="Kuliah" selected={false} onToggle={() => {}} suggested />
+        <Chip label="Kerja" selected={false} onToggle={() => {}} />
+      </ThemeProvider>,
+    );
+    expect(screen.getAllByText('disarankan')).toHaveLength(1);
+  });
 });

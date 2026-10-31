@@ -1,4 +1,9 @@
-import { FORBIDDEN_WORDS, NOT_ENOUGH_DATA_TEXT, localInsightText } from './insightText';
+import {
+  FORBIDDEN_WORDS,
+  NOT_ENOUGH_DATA_TEXT,
+  PRESSURE_WORDS,
+  localInsightText,
+} from './insightText';
 import type { Pattern, PatternSummary } from './types';
 
 const ctx: Pattern = {
@@ -51,13 +56,13 @@ describe('localInsightText', () => {
     const r = localInsightText(summary([ctx, exp, coping]));
     expect(r.text).toBe('Ini beberapa hal yang MOJI perhatikan dari 9 catatanmu.');
     expect(r.patternTexts[ctx.key]).toBe(
-      'Dari 6 catatan yang menyebut Akademik, 4 di antaranya mood-mu sedang rendah. Sepertinya Akademik cukup berpengaruh ke perasaanmu, apakah ini sesuai dengan yang kamu alami?',
+      'Dari 6 catatan yang menyebut akademik, 4 di antaranya mood-mu sedang rendah. Mungkin akademik ikut berperan di sini, tapi kamu yang paling tahu. Apakah ini terasa sesuai?',
     );
     expect(r.patternTexts[exp.key]).toBe(
-      'Saat mood-mu rendah, kamu cukup sering mencatat lelah (3 kali). Mungkin keduanya saling berkaitan, bagaimana menurutmu?',
+      'Di catatan saat mood-mu rendah, lelah beberapa kali muncul (3 kali). Mungkin keduanya berkaitan. Bagaimana menurutmu?',
     );
     expect(r.patternTexts[coping.key]).toBe(
-      'Jalan kaki kamu tandai membantu 4 dari 5 kali. Sepertinya ini salah satu hal yang cocok buatmu.',
+      'Jalan kaki kamu tandai membantu 4 dari 5 kali. Mungkin ini salah satu hal yang cocok buatmu, walau tidak harus selalu berhasil.',
     );
   });
 
@@ -65,7 +70,7 @@ describe('localInsightText', () => {
     const r = localInsightText(summary([{ ...ctx, previouslyRejected: true }]));
     expect(
       r.patternTexts[ctx.key].startsWith(
-        'Kamu pernah bilang pola ini kurang sesuai, tapi catatanmu masih menunjukkannya. Dari 6',
+        'Sebelumnya kamu merasa pola ini kurang pas. Kalau menurutmu masih begitu, tidak apa-apa. Ini yang MOJI lihat sekarang: Dari 6',
       ),
     ).toBe(true);
   });
@@ -73,13 +78,13 @@ describe('localInsightText', () => {
   it('returns 1-3 unique questions in kind order, then general', () => {
     const r = localInsightText(summary([coping, ctx, exp]));
     expect(r.questions).toEqual([
-      'Apa yang biasanya terjadi saat Akademik terasa berat?',
+      'Apa yang biasanya terjadi saat akademik terasa berat?',
       'Apa yang biasanya kamu butuhkan saat merasa lelah?',
-      'Kapan terakhir kali Jalan kaki membantumu?',
+      'Kalau kamu mau, ingat-ingat lagi: kapan terakhir jalan kaki terasa membantu?',
     ]);
     const one = localInsightText(summary([coping]));
     expect(one.questions).toEqual([
-      'Kapan terakhir kali Jalan kaki membantumu?',
+      'Kalau kamu mau, ingat-ingat lagi: kapan terakhir jalan kaki terasa membantu?',
       'Dari minggu ini, momen apa yang paling ingin kamu ingat?',
     ]);
     for (const q of [r.questions, one.questions]) expect(new Set(q).size).toBe(q.length);
@@ -87,11 +92,11 @@ describe('localInsightText', () => {
 
   it('handles enough data but no patterns', () => {
     const r = localInsightText(summary([]));
-    expect(r.text).toBe('Dari 9 catatanmu, belum ada pola yang menonjol. Itu juga wajar, kok.');
+    expect(r.text).toBe('Dari 9 catatanmu, belum ada pola yang menonjol, dan itu tidak apa-apa. Catatanmu tetap berarti.');
     expect(r.patternTexts).toEqual({});
     expect(r.questions).toEqual([
       'Dari minggu ini, momen apa yang paling ingin kamu ingat?',
-      'Apa satu hal kecil yang bisa membuat besok sedikit lebih ringan?',
+      'Kalau ada, hal kecil apa yang bisa membuat harimu terasa sedikit lebih ringan?',
     ]);
   });
 
@@ -114,6 +119,7 @@ describe('localInsightText', () => {
     for (const o of outputs) {
       const all = [o.text, ...Object.values(o.patternTexts), ...o.questions].join(' ');
       expect(all).not.toMatch(FORBIDDEN_WORDS);
+      expect(all).not.toMatch(PRESSURE_WORDS);
       expect(all.toLowerCase()).not.toContain('kamu harus');
     }
     expect(NOT_ENOUGH_DATA_TEXT).not.toMatch(FORBIDDEN_WORDS);
@@ -123,5 +129,18 @@ describe('localInsightText', () => {
     expect('kamu mengalami depresi').toMatch(FORBIDDEN_WORDS);
     expect('Gangguan tidur').toMatch(FORBIDDEN_WORDS);
     expect('kamu mengalami kecemasan').toMatch(FORBIDDEN_WORDS);
+  });
+
+  it('FORBIDDEN_WORDS covers the extended clinical list as substrings', () => {
+    for (const w of ['trauma', 'klinis', 'ADHD', 'mengidap', 'gejala', 'sakit jiwa', 'psikiater']) {
+      expect(w).toMatch(FORBIDDEN_WORDS);
+    }
+  });
+
+  it('PRESSURE_WORDS matches pressuring phrases', () => {
+    for (const w of ['kamu harus', 'Kamu perlu', 'seharusnya', 'sebaiknya', 'jangan lupa', 'streak', 'hari bolong', 'belum mencatat', 'terlewat']) {
+      expect(w).toMatch(PRESSURE_WORDS);
+    }
+    expect('Mungkin ini cocok buatmu').not.toMatch(PRESSURE_WORDS);
   });
 });

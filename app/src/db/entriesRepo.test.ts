@@ -5,7 +5,6 @@ import { createEntry, deleteEntry, getEntry, listEntries, updateEntry } from './
 import { addPendingSafety, takePendingSafety } from './pendingSafetyRepo';
 import { onDataChanged } from './events';
 
-jest.mock('expo-crypto', () => ({ randomUUID: () => globalThis.crypto.randomUUID() }));
 
 let db: Db;
 beforeEach(async () => {
