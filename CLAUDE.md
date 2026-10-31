@@ -11,7 +11,7 @@ MOJI adalah aplikasi jurnal dan mood tracker yang ramah kesehatan mental. Platfo
 |---|---|
 | `app/` | Aplikasi Expo SDK 58 (TypeScript, expo-router). Route ada di `app/src/app/`, kode lain di `app/src/`. **Baca `app/AGENTS.md` sebelum menyentuh API Expo/RN.** |
 | `functions/` | Cloud Functions + Vertex AI + Firestore (kode undangan). Belum dibuat; dibuat oleh plan. |
-| `scripts/` | Skrip admin, misalnya membuat kode undangan. Belum dibuat. |
+| `functions/src/admin/` | Skrip admin kode undangan (`npm run invites` di `functions/`). |
 | `docs/superpowers/` | Spec, plan, laporan task. |
 
 ## Perintah (jalankan dari `app/`)
