@@ -37,6 +37,7 @@ MOOD → CONTEXT → PATTERN → INSIGHT → REFLECTION
 5. Ada pertanyaan reflektif, dan pengguna bisa mengonfirmasi atau mengoreksi pola.
 6. Ada jaring pengaman: kalau terdeteksi tanda butuh bantuan, aplikasi menampilkan kontak bantuan dengan lembut.
 7. Pengguna memegang penuh datanya: semua data ada di HP, bisa diekspor, bisa dihapus.
+8. **Statistik pribadi (analytics untuk pengguna) [Keputusan tim]:** pengguna bisa melihat statistik dan grafik tentang dirinya sendiri, dihitung di HP dari catatannya sendiri (lihat §6.13).
 
 ### Non-goal (tidak dikerjakan di MVP)
 - Login atau akun pengguna, sinkronisasi cloud, multi-device. **[Keputusan tim]**
@@ -45,7 +46,7 @@ MOOD → CONTEXT → PATTERN → INSIGHT → REFLECTION
 - Chatbot percakapan bebas dengan AI. Risiko keselamatan terlalu besar untuk MVP. **[Usulan desainer]**
 - Gamifikasi: streak, poin, badge, hitungan hari bolong. **[Keputusan tim]**
 - Fitur sosial atau berbagi ke orang lain.
-- Analytics atau tracking perilaku pengguna.
+- Telemetri aplikasi: tracking perilaku pengguna yang dikirim ke tim atau pihak ketiga. Ini berbeda dari statistik pribadi untuk pengguna, yang termasuk tujuan (§6.13).
 - Diagnosis dalam bentuk apa pun.
 
 ### Anti-goal (gagal walaupun secara teknis berjalan)
@@ -283,6 +284,33 @@ Layarnya singkat, maksimal sekitar 4 layar, dan semuanya bisa dilewati kecuali i
 - Kunci aplikasi dengan biometrik atau PIN HP (P2) **[Usulan desainer]**.
 - Atur jam pengingat, hari ringkasan mingguan, dan kontak bantuan.
 
+### 6.13 Statistik pribadi: analytics untuk pengguna (P0) [Keputusan tim]
+Halaman statistik tentang diri pengguna sendiri. **Semua dihitung di HP** dari tabel lokal, tidak dikirim ke mana pun, dan tidak butuh AI.
+
+Isi yang diusulkan **[Usulan desainer]**:
+
+| Statistik | Bentuk | Prioritas |
+|---|---|---|
+| Tren mood | Garis atau titik per hari (rata-rata harian) | P0 |
+| Sebaran mood | Jumlah catatan per tingkat mood | P0 |
+| Konteks yang paling sering dicatat | Batang horizontal per kategori | P0 |
+| Mood menurut konteks | Rata-rata mood ketika konteks X dicatat | P0 |
+| Coping yang paling sering membantu | Daftar dengan proporsi "membantu" | P1 |
+| Pengalaman yang sering muncul | Daftar per dimensi (emosi, fisik, pikiran, self-esteem) | P1 |
+| Pola waktu | Mood menurut hari dalam minggu atau jam | P2 |
+
+- Pengguna bisa memilih rentang **7 hari / 30 hari / semua**.
+- Setiap grafik punya ringkasan teks singkat dan label untuk screen reader. Grafik tidak boleh hanya mengandalkan warna.
+- **Aturan ramah kesehatan mental:**
+  - tidak ada "skor" atau nilai baik/buruk;
+  - tidak ada perbandingan dengan orang lain;
+  - tidak ada merah untuk mood rendah;
+  - tidak ada kalimat seperti "mood kamu memburuk 20%";
+  - deskripsinya netral dan faktual, misalnya "Minggu ini ada 3 catatan dengan mood Kurang baik".
+- **Data sedikit:** kalau datanya masih sedikit, tampilkan apa yang ada dengan catatan lembut ("Grafik ini akan makin jelas seiring catatanmu bertambah"), bukan layar kosong yang terasa seperti kegagalan.
+- Perhitungannya memakai modul yang sama dengan pattern engine (§6.7) bila memungkinkan, dan diuji unit.
+- Library grafik [Diserahkan ke builder], dengan syarat kompatibel dengan Expo SDK 58 dan mendukung mode gelap.
+
 ## 7. Backend AI dan keamanan
 
 ### 7.1 Kode undangan [Keputusan tim]
@@ -342,11 +370,13 @@ Arah visual spesifik seperti palet, tipografi, dan ilustrasi atau maskot **[Dise
 2. **Beranda:** sapaan sesuai waktu, pemilih mood besar ("Gimana perasaanmu sekarang?"), kartu insight terbaru jika ada, dan akses "Butuh bantuan?".
 3. **Alur catat:** mood, lalu (opsional) konteks, pengalaman, coping, dan tulisan bebas dengan saran AI. Setelah disimpan, support sheet muncul bila perlu.
 4. **Timeline:** daftar dan ringkasan visual mingguan atau bulanan, plus detail catatan dengan opsi edit dan hapus.
-5. **Insight:** insight terbaru, pertanyaan reflektif, tanggapan dan refleksi, riwayat insight, dan tombol "Lihat polaku".
+5. **Polaku:** dua bagian.
+   - **Insight:** insight terbaru, pertanyaan reflektif, tanggapan dan refleksi, riwayat insight, dan tombol "Lihat polaku".
+   - **Statistik:** statistik pribadi (§6.13).
 6. **Butuh bantuan?:** layanan nasional, konseling kampus, kontak pribadi.
 7. **Pengaturan:** AI dan kode undangan, privasi dan data, pengingat, kontak bantuan, tentang MOJI.
 
-Navigasi bawah [Usulan desainer]: Beranda, Timeline, Insight, Pengaturan.
+Navigasi bawah [Usulan desainer]: Beranda, Timeline, Polaku, Pengaturan.
 
 ## 10. Kualitas dan pengujian
 
