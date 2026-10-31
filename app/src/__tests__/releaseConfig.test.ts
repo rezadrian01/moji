@@ -18,4 +18,14 @@ describe('konfigurasi rilis', () => {
     expect(eas.build.preview.android.buildType).toBe('apk');
     expect(eas.build.preview.channel).toBe('preview');
   });
+
+  it('setiap profil memakai environment EAS yang sesuai', () => {
+    expect(eas.build.preview.environment).toBe('preview');
+    expect(eas.build.development.environment).toBe('development');
+  });
+
+  it('versionCode profil preview naik otomatis dari sumber versi remote (uji instal N lalu N+1)', () => {
+    expect(eas.cli.appVersionSource).toBe('remote');
+    expect(eas.build.preview.autoIncrement).toBe(true);
+  });
 });
