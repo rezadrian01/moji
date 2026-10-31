@@ -6,7 +6,7 @@ import type { Deps, HandlerResult } from '../router.js';
 
 const isResponse = (x: unknown): x is AnalyzeEntryResponse => AnalyzeEntryResponseSchema.safeParse(x).success;
 
-export async function handleAnalyzeEntry(body: unknown, deps: Deps): Promise<HandlerResult> {
+export async function handleAnalyzeEntry(body: unknown, deps: Pick<Deps, 'gemini'>): Promise<HandlerResult> {
   const parsed = AnalyzeEntryRequestSchema.safeParse(body);
   if (!parsed.success) return { status: 400, body: { error: 'bad_request' }, reason: 'bad_request' };
   const req = parsed.data;

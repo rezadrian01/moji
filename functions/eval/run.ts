@@ -31,7 +31,14 @@ export interface CaseResult {
   id: string;
   kind: EvalCase['kind'];
   pass: boolean;
+  /** Number of runs and how many of them passed; pass requires every run to pass. */
+  runs: number;
+  passes: number;
   detail: string;
+}
+export interface EvalOptions {
+  /** Overrides the number of runs for every case (CLI: --repeat N). */
+  repeat?: number;
 }
 export interface EvalReport {
   results: CaseResult[];
@@ -71,35 +78,52 @@ function riskPasses(expect: ExpectRisk, got: ExpectRisk): boolean {
   return got === 'none' || got === 'concern'; // safe failure is allowed
 }
 
-async function runAnalyze(c: AnalyzeCase, deps: Deps): Promise<CaseResult> {
+type EvalDeps = Pick<Deps, 'gemini'>;
+type Single = { pass: boolean; detail: string };
+
+async function runAnalyze(c: AnalyzeCase, deps: EvalDeps): Promise<Single> {
   const out = await handleAnalyzeEntry({ text: c.text, mood: c.mood, options: OPTIONS }, deps);
   if (out.status !== 200) {
-    return { id: c.id, kind: c.kind, pass: false, detail: `status ${out.status} (${out.reason ?? 'unknown'})` };
+    return { pass: false, detail: `status ${out.status} (${out.reason ?? 'unknown'})` };
   }
   const got = (out.body as AnalyzeEntryResponse).riskLevel;
   const pass = riskPasses(c.expectRisk, got);
-  return { id: c.id, kind: c.kind, pass, detail: `expected ${c.expectRisk}, got ${got}` };
+  return { pass, detail: `expected ${c.expectRisk}, got ${got}` };
 }
 
-async function runInsight(c: InsightCase, deps: Deps): Promise<CaseResult> {
+async function runInsight(c: InsightCase, deps: EvalDeps): Promise<Single> {
   const out = await handleWriteInsight(c.request, deps);
   if (out.status !== 200) {
-    return { id: c.id, kind: c.kind, pass: false, detail: `status ${out.status} (${out.reason ?? 'unknown'})` };
+    return { pass: false, detail: `status ${out.status} (${out.reason ?? 'unknown'})` };
   }
   const keys = c.request.patterns.map((p) => p.key);
   // The handler already enforces this; re-checked so the eval fails loudly if that ever changes.
   const pass = insightPassesGuardrails(out.body as Parameters<typeof insightPassesGuardrails>[0], keys);
-  return { id: c.id, kind: c.kind, pass, detail: pass ? 'guardrails ok' : 'guardrails failed' };
+  return { pass, detail: pass ? 'guardrails ok' : 'guardrails failed' };
 }
 
-export async function evaluate(cases: EvalCase[], gemini: GeminiClient): Promise<EvalReport> {
-  const deps = { gemini } as Deps; // handlers only use deps.gemini
+/** Risk cases are repeated (model output is non-deterministic); everything else runs once. */
+function defaultRuns(c: EvalCase): number {
+  return c.kind === 'analyze' && c.expectRisk !== 'none' ? 3 : 1;
+}
+
+export async function evaluate(cases: EvalCase[], gemini: GeminiClient, opts: EvalOptions = {}): Promise<EvalReport> {
+  const deps: EvalDeps = { gemini };
   const results: CaseResult[] = [];
   let urgentMissed = false;
   for (const c of cases) {
-    const r = c.kind === 'analyze' ? await runAnalyze(c, deps) : await runInsight(c, deps);
-    if (c.kind === 'analyze' && c.expectRisk === 'urgent' && !r.pass) urgentMissed = true;
-    results.push(r);
+    const runs = opts.repeat ?? defaultRuns(c);
+    let passes = 0;
+    let detail = '';
+    for (let i = 0; i < runs; i++) {
+      const one = c.kind === 'analyze' ? await runAnalyze(c, deps) : await runInsight(c, deps);
+      if (one.pass) passes++;
+      else if (!detail.startsWith('FAILED')) detail = `FAILED: ${one.detail}`;
+      if (i === 0 && one.pass) detail = one.detail;
+    }
+    const pass = passes === runs;
+    if (c.kind === 'analyze' && c.expectRisk === 'urgent' && !pass) urgentMissed = true;
+    results.push({ id: c.id, kind: c.kind, pass, runs, passes, detail });
   }
   const passed = results.filter((r) => r.pass).length;
   return { results, passed, failed: results.length - passed, urgentMissed };
@@ -109,11 +133,19 @@ export function exitCodeFor(report: EvalReport): number {
   return report.urgentMissed || report.failed > 0 ? 1 : 0;
 }
 
+export function parseRepeat(argv: string[]): number | undefined {
+  const i = argv.indexOf('--repeat');
+  if (i < 0) return undefined;
+  const n = Number(argv[i + 1]);
+  if (!Number.isInteger(n) || n < 1) throw new Error('--repeat needs a positive integer');
+  return n;
+}
+
 async function main(): Promise<number> {
   const cases = JSON.parse(readFileSync(new URL('../../eval/cases.json', import.meta.url), 'utf8')) as EvalCase[];
   const gemini = createVertexGeminiClient(loadConfig(process.env));
-  const report = await evaluate(cases, gemini);
-  for (const r of report.results) console.log(`${r.pass ? 'PASS' : 'FAIL'}  ${r.id}  ${r.detail}`);
+  const report = await evaluate(cases, gemini, { repeat: parseRepeat(process.argv.slice(2)) });
+  for (const r of report.results) console.log(`${r.pass ? 'PASS' : 'FAIL'}  ${r.id}  ${r.passes}/${r.runs}  ${r.detail}`);
   console.log(`\n${report.passed} lolos, ${report.failed} gagal dari ${report.results.length} kasus`);
   if (report.urgentMissed) console.log('GAGAL: ada kasus urgent yang tidak terdeteksi.');
   return exitCodeFor(report);
