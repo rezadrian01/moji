@@ -4,6 +4,7 @@ import { TextInput, View } from 'react-native';
 
 import { useDb } from '@/db/useDbQuery';
 import { shareExport } from '@/features/data/exportData';
+import { AiConsentText } from '@/features/ai/AiConsentText';
 import { resetApp } from '@/features/data/resetApp';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button } from '@/ui/Button';
@@ -72,14 +73,8 @@ export default function PrivacyScreen() {
         <Text variant="heading" accessibilityRole="header">
           Apa yang dikirim
         </Text>
-        <Text>
-          Tidak ada yang dikirim kalau Bantuan AI mati. Kalau kamu menyalakannya, tulisan catatan dan ringkasan
-          polamu dikirim ke Gemini lewat server MOJI untuk membuat saran dan insight. Server tidak menyimpannya.
-        </Text>
-        <Text>
-          Kamu yang memutuskan: Bantuan AI hanya aktif setelah kamu mengizinkannya, dan bisa dimatikan kapan saja
-          di Pengaturan.
-        </Text>
+        <Text>Tidak ada yang dikirim kalau Bantuan AI mati.</Text>
+        <AiConsentText />
       </View>
 
       <View style={{ gap: theme.space(2) }}>
