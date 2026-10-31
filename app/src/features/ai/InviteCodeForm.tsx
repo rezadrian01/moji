@@ -34,6 +34,8 @@ export function InviteCodeForm({ onValid, client }: { onValid: (code: string) =>
       } else {
         setMessage(MESSAGES[result.reason] ?? FALLBACK_MESSAGE);
       }
+    } catch {
+      setMessage(FALLBACK_MESSAGE);
     } finally {
       setChecking(false);
     }

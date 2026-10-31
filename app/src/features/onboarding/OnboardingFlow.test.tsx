@@ -106,4 +106,40 @@ describe('OnboardingFlow', () => {
     await waitFor(() => expect(mockReplace).toHaveBeenCalled());
     expect((await getSettings(db)).reminderTime).toBe('20:00');
   });
+
+  describe('reminder failures', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Notifications = require('expo-notifications');
+
+    async function toStep4() {
+      await setup();
+      await press('Lewati');
+      await press('Lewati');
+      await press('Nanti saja');
+    }
+
+    it('still finishes onboarding when the scheduler throws', async () => {
+      await toStep4();
+      await fireEvent(screen.getByLabelText('Pengingat harian'), 'valueChange', true);
+      Notifications.cancelAllScheduledNotificationsAsync.mockRejectedValueOnce(new Error('boom'));
+      await press('Mulai');
+      await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+      expect((await getSettings(db)).onboardingDone).toBe(true);
+    });
+
+    it('shows a gentle line when notification permission is denied, and still finishes', async () => {
+      await toStep4();
+      Notifications.getPermissionsAsync.mockResolvedValueOnce({ status: 'denied' });
+      Notifications.requestPermissionsAsync.mockResolvedValueOnce({ status: 'denied' });
+      await fireEvent(screen.getByLabelText('Pengingat harian'), 'valueChange', true);
+      expect(
+        await screen.findByText('Izin notifikasi belum aktif. Kamu bisa menyalakannya nanti di Pengaturan.'),
+      ).toBeTruthy();
+      await press('Mulai');
+      await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+      const s = await getSettings(db);
+      expect(s.onboardingDone).toBe(true);
+      expect(s.reminderTime).toBeNull();
+    });
+  });
 });

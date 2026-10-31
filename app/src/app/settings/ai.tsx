@@ -60,7 +60,10 @@ export default function AiSettingsScreen() {
         />
       </View>
       {form !== 'none' ? (
-        <InviteCodeForm onValid={() => void onValid()} />
+        <>
+          <InviteCodeForm onValid={() => void onValid()} />
+          <Button label="Batal" variant="quiet" onPress={() => setForm('none')} />
+        </>
       ) : (
         <Button label="Ganti kode" variant="secondary" onPress={() => setForm('change')} />
       )}

@@ -39,6 +39,19 @@ describe('InviteCodeForm', () => {
     expect(await getInviteCode()).toBe('MOJI-R07-K3F9');
   });
 
+  it('shows the network message when checkInvite throws', async () => {
+    const client = {
+      checkInvite: jest.fn(async () => {
+        throw new Error('boom');
+      }),
+    };
+    const onValid = await setup(client as never);
+    await fireEvent.changeText(screen.getByLabelText('Kode undangan'), 'ABC');
+    await fireEvent.press(screen.getByLabelText('Cek kode'));
+    expect(await screen.findByText('Koneksi lagi bermasalah. Kamu bisa coba lagi nanti.')).toBeTruthy();
+    expect(onValid).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['invalid_invite', 'Kodenya belum cocok. Coba cek lagi, ya.'],
     ['revoked_invite', 'Kode ini sudah tidak aktif. Kamu tetap bisa memakai MOJI tanpa AI.'],

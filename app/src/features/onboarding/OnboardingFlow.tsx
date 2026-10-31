@@ -29,6 +29,7 @@ export function OnboardingFlow({ client }: { client?: InviteChecker }) {
   const [reminderOn, setReminderOn] = useState(false);
   const [time, setTime] = useState(DEFAULT_TIME);
   const [finishing, setFinishing] = useState(false);
+  const [denied, setDenied] = useState(false);
 
   async function enableAi() {
     await updateSettings(db, { aiEnabled: true, aiConsentAt: new Date().toISOString() });
@@ -39,11 +40,30 @@ export function OnboardingFlow({ client }: { client?: InviteChecker }) {
   async function finish() {
     if (finishing) return;
     setFinishing(true);
-    let reminderTime: string | null = null;
-    if (reminderOn && (await ensureNotificationPermission())) reminderTime = time;
-    const saved = await updateSettings(db, { reminderTime, onboardingDone: true });
-    await applyReminderSettings(saved);
-    router.replace('/');
+    try {
+      const saved = await updateSettings(db, {
+        reminderTime: reminderOn && !denied ? time : null,
+        onboardingDone: true,
+      });
+      try {
+        await applyReminderSettings(saved);
+      } catch {
+        // Pengingat gagal dijadwalkan; onboarding tetap selesai.
+      }
+      router.replace('/');
+    } finally {
+      setFinishing(false);
+    }
+  }
+
+  async function toggleReminder(on: boolean) {
+    setReminderOn(on);
+    if (!on) return setDenied(false);
+    try {
+      setDenied(!(await ensureNotificationPermission()));
+    } catch {
+      setDenied(true);
+    }
   }
 
   return (
@@ -101,9 +121,14 @@ export function OnboardingFlow({ client }: { client?: InviteChecker }) {
                 accessibilityRole="switch"
                 accessibilityLabel="Pengingat harian"
                 value={reminderOn}
-                onValueChange={setReminderOn}
+                onValueChange={(v) => void toggleReminder(v)}
               />
             </View>
+            {denied ? (
+              <Text muted accessibilityLiveRegion="polite">
+                Izin notifikasi belum aktif. Kamu bisa menyalakannya nanti di Pengaturan.
+              </Text>
+            ) : null}
             {reminderOn ? (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space(2) }}>
                 {TIMES.map((t) => (
