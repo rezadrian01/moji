@@ -1,19 +1,15 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { defaultAiClient } from '@/ai/client';
-import type { Db } from '@/db/db';
-import { createEntry, listEntries, updateEntry } from '@/db/entriesRepo';
+import { createEntry, getEntry, updateEntry } from '@/db/entriesRepo';
 import { useDb } from '@/db/useDbQuery';
 import { MOOD_LABELS } from '@/domain/taxonomy';
-import type { Entry, Mood, NewEntry } from '@/domain/types';
-import { useAiAllowed } from '@/features/app/useAiAllowed';
-import { useDraft } from '@/features/entry/draft';
+import type { Entry, Mood } from '@/domain/types';
+import { useDraft, type EntryDraft } from '@/features/entry/draft';
 import { EntryDetailsForm, EntryTimeField, formatEntryTime, type EntryDetails } from '@/features/entry/EntryDetailsForm';
-import { runPostSave } from '@/features/entry/postSave';
-import { useSafety } from '@/features/safety/SafetyProvider';
+import { usePostSave } from '@/features/entry/usePostSave';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button } from '@/ui/Button';
 import { MoodPicker } from '@/ui/MoodPicker';
@@ -22,13 +18,19 @@ import { Screen } from '@/ui/Screen';
 import { Text } from '@/ui/Text';
 
 type Details = Omit<EntryDetails, 'createdAt'>;
+type Notice = 'resumed' | 'leftover' | null;
 type Stage =
   | { kind: 'restoring' }
   | { kind: 'pick' }
   | { kind: 'saved'; entry: Entry }
-  | { kind: 'details'; entry: Entry; resumed: boolean };
+  | { kind: 'details'; entry: Entry; notice: Notice };
 
 const NO_DETAILS: Details = { note: null, contexts: [], experiences: [], copings: [] };
+
+const NOTICE_TEXT: Record<Exclude<Notice, null>, string> = {
+  resumed: 'Ceritamu tadi belum selesai. Ini lanjutannya, kalau kamu mau.',
+  leftover: 'Tulisanmu sebelumnya masih ada di sini.',
+};
 
 function parseMood(raw: string | string[] | undefined): Mood | null {
   const n = Number(Array.isArray(raw) ? raw[0] : raw);
@@ -38,7 +40,7 @@ function parseMood(raw: string | string[] | undefined): Mood | null {
 const hasDetails = (d: Partial<Details>) =>
   !!d.note?.trim() || !!d.contexts?.length || !!d.experiences?.length || !!d.copings?.length;
 
-const detailsOf = (d: Partial<NewEntry>): Details => ({
+const detailsOf = (d: Partial<Details>): Details => ({
   note: d.note ?? null,
   contexts: d.contexts ?? [],
   experiences: d.experiences ?? [],
@@ -48,42 +50,18 @@ const detailsOf = (d: Partial<NewEntry>): Details => ({
 /** Teks yang hanya spasi disimpan sebagai "tanpa tulisan". */
 const forSave = (d: Details): Details => ({ ...d, note: d.note?.trim() ? d.note : null });
 
-/** Draft detail menyimpan createdAt + mood catatan yang sudah tersimpan; cari catatan itu lagi. */
-async function findDraftEntry(db: Db, d: Partial<NewEntry>): Promise<Entry | null> {
-  if (!d.createdAt || !d.mood) return null;
-  const to = new Date(Date.parse(d.createdAt) + 1).toISOString();
-  const found = await listEntries(db, { from: d.createdAt, to });
-  return found.find((e) => e.createdAt === d.createdAt && e.mood === d.mood) ?? null;
-}
-
-/** Safety lokal + AI setelah simpan. Tidak pernah ditunggu, dan gagalnya tidak menghalangi layar. */
-function usePostSave(): (entry: Entry) => void {
-  const db = useDb();
-  const { show } = useSafety();
-  const aiAllowed = useAiAllowed();
-  const ai = useMemo(() => defaultAiClient(), []);
-  return useCallback(
-    (entry: Entry) => {
-      runPostSave(entry, {
-        db,
-        ai,
-        aiAllowed,
-        showSupport: show,
-        isAppActive: () => AppState.currentState === 'active',
-        now: () => new Date(),
-      }).catch(() => {
-        // Catatan sudah tersimpan; langkah lanjutan yang gagal tidak boleh menghalangi pengguna.
-      });
-    },
-    [db, ai, aiAllowed, show],
-  );
-}
-
 function leave() {
   if (router.canGoBack()) router.back();
   else router.replace('/');
 }
 
+/**
+ * Aturan draft (R11): teks yang sudah diketik tidak pernah dibuang diam-diam, dan mood yang di-tap
+ * di Beranda selalu menjadi catatan baru.
+ * - Draft detail (punya `entryId`) untuk catatan yang masih ada: dibuka tanpa mood → dilanjutkan;
+ *   dibuka dengan `?mood=` → detailnya disimpan ke catatan itu dulu, lalu catatan baru dimulai.
+ * - Draft detail yang catatannya sudah tidak ada: teksnya ditampilkan di catatan baru setelah disimpan.
+ */
 export default function NewEntryScreen() {
   const theme = useTheme();
   const db = useDb();
@@ -97,93 +75,134 @@ export default function NewEntryScreen() {
   const [mood, setMood] = useState<Mood | null>(paramMood);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [details, setDetails] = useState<Details>(NO_DETAILS);
+  // Tulisan dari draft yang catatannya sudah tidak ada; ditampilkan setelah catatan baru disimpan.
+  const [leftover, setLeftover] = useState<Details | null>(null);
+  const [previousSaved, setPreviousSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const inFlight = useRef(false);
 
-  // Pulihkan draft sekali, begitu selesai dibaca.
   const restored = useRef(false);
   useEffect(() => {
     if (!draft.loaded || restored.current) return;
     restored.current = true;
-    const d = draft.draft;
+    const d: EntryDraft | null = draft.draft;
     (async () => {
-      if (d && hasDetails(d)) {
-        const entry = await findDraftEntry(db, d).catch(() => null);
-        setDetails(detailsOf(d));
-        if (entry) {
-          setStage({ kind: 'details', entry, resumed: true });
-          return;
+      const carried = d && hasDetails(d) ? detailsOf(d) : null;
+      const linked = carried && d?.entryId ? await getEntry(db, d.entryId).catch(() => null) : null;
+      if (carried && linked && paramMood === null) {
+        setDetails(carried);
+        setStage({ kind: 'details', entry: linked, notice: 'resumed' });
+        return;
+      }
+      if (carried && linked) {
+        try {
+          const saved = await updateEntry(db, linked.id, forSave(carried), new Date());
+          if (saved) {
+            postSave(saved);
+            draft.clear();
+            setPreviousSaved(true);
+          } else {
+            setLeftover(carried);
+          }
+        } catch {
+          setLeftover(carried);
         }
+      } else if (carried) {
+        setLeftover(carried);
       }
-      if (d) {
-        setMood(paramMood ?? d.mood ?? null);
-        setCreatedAt(d.createdAt ?? null);
-      }
+      // Mood & waktu hanya dipulihkan dari draft catatan yang belum tersimpan, dan tidak pernah
+      // ditempelkan ke mood yang baru di-tap.
+      const unsaved = d && !d.entryId ? d : null;
+      setMood(paramMood ?? unsaved?.mood ?? null);
+      setCreatedAt(paramMood === null ? (unsaved?.createdAt ?? null) : null);
       setStage({ kind: 'pick' });
     })();
-  }, [draft.loaded, draft.draft, db, paramMood]);
+  }, [draft, db, paramMood, postSave]);
 
-  const pickDraft = (m: Mood | null, at: string | null): Partial<NewEntry> => ({
-    ...(m ? { mood: m } : {}),
-    ...(at ? { createdAt: at } : {}),
-    // Detail dari draft lama yang catatannya sudah tidak ada ikut dibawa.
-    ...(hasDetails(details) ? details : {}),
-  });
+  const savePickDraft = (m: Mood | null, at: string | null) =>
+    draft.save({
+      ...(m ? { mood: m } : {}),
+      ...(at ? { createdAt: at } : {}),
+      ...(leftover ?? {}),
+    });
 
   const onMood = (m: Mood) => {
     setMood(m);
-    draft.save(pickDraft(m, createdAt));
+    savePickDraft(m, createdAt);
   };
   const onTime = (iso: string) => {
     setCreatedAt(iso);
-    draft.save(pickDraft(mood, iso));
+    savePickDraft(mood, iso);
   };
 
-  const onSave = async () => {
-    if (!mood || busy) return;
+  /** Satu aksi simpan pada satu waktu, termasuk dua tap dalam satu frame. */
+  const once = async (work: () => Promise<void>) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setFailed(false);
     try {
-      const entry = await createEntry(
-        db,
-        { mood, ...(createdAt ? { createdAt } : {}), ...(hasDetails(details) ? forSave(details) : {}) },
-        new Date(),
-      );
-      draft.clear();
-      postSave(entry);
-      setStage({ kind: 'saved', entry });
+      await work();
     } catch {
       setFailed(true);
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
+
+  const onSave = () =>
+    once(async () => {
+      if (!mood) return;
+      const entry = await createEntry(db, { mood, ...(createdAt ? { createdAt } : {}) }, new Date());
+      postSave(entry);
+      if (leftover) {
+        setDetails(leftover);
+        draft.save({ entryId: entry.id, mood: entry.mood, createdAt: entry.createdAt, ...leftover });
+        setLeftover(null);
+        setStage({ kind: 'details', entry, notice: 'leftover' });
+      } else {
+        draft.clear();
+        setStage({ kind: 'saved', entry });
+      }
+    });
 
   const onDetailsChange = (entry: Entry) => (v: EntryDetails) => {
     const next = detailsOf(v);
     setDetails(next);
-    if (hasDetails(next)) draft.save({ mood: entry.mood, createdAt: entry.createdAt, ...next });
+    if (hasDetails(next)) draft.save({ entryId: entry.id, mood: entry.mood, createdAt: entry.createdAt, ...next });
     else draft.clear();
   };
 
-  const onSaveDetails = async (entry: Entry) => {
-    if (busy) return;
-    setBusy(true);
-    setFailed(false);
-    try {
+  const onSaveDetails = (entry: Entry) =>
+    once(async () => {
       const patch = forSave(details);
       const saved =
         (await updateEntry(db, entry.id, patch, new Date())) ??
-        // Catatannya terhapus di tempat lain selagi detail diisi: simpan sebagai catatan baru.
+        // Catatannya terhapus di tempat lain selagi detail diisi: pengguna menekan simpan atas teks
+        // yang ia lihat, jadi simpan sebagai catatan baru.
         (await createEntry(db, { mood: entry.mood, createdAt: entry.createdAt, ...patch }, new Date()));
       draft.clear();
       postSave(saved);
       router.replace({ pathname: '/entry/[id]', params: { id: saved.id } });
-    } catch {
-      setFailed(true);
-      setBusy(false);
-    }
-  };
+    });
+
+  /** "Nanti saja" di tahap detail: apa pun yang sudah diisi tetap disimpan ke catatannya. */
+  const onLaterDetails = (entry: Entry) =>
+    once(async () => {
+      if (hasDetails(details)) {
+        const saved = await updateEntry(db, entry.id, forSave(details), new Date());
+        // Kalau catatannya sudah tidak ada, draft dibiarkan dan teksnya muncul lagi lain kali.
+        if (saved) {
+          draft.clear();
+          postSave(saved);
+        }
+      } else {
+        draft.clear();
+      }
+      leave();
+    });
 
   const onLater = () => {
     draft.clear();
@@ -219,22 +238,26 @@ export default function NewEntryScreen() {
           <Text variant="title" accessibilityRole="header" accessibilityLiveRegion="polite">
             Tersimpan. Mau cerita lebih?
           </Text>
+          {previousSaved ? <Text muted>Ceritamu yang sebelumnya sudah tersimpan.</Text> : null}
           <Text muted>Kamu bisa tambahkan apa yang terjadi dan yang kamu rasakan. Boleh juga nanti saja.</Text>
-          <Button label="Ceritain lebih" onPress={() => setStage({ kind: 'details', entry: stage.entry, resumed: false })} />
+          <Button
+            label="Ceritain lebih"
+            onPress={() => setStage({ kind: 'details', entry: stage.entry, notice: null })}
+          />
           <Button label="Nanti saja" variant="quiet" onPress={onLater} />
         </Animated.View>
       </Screen>
     );
   }
 
-  const { entry, resumed } = stage;
+  const { entry, notice } = stage;
   return (
     <Screen scroll>
       <Animated.View entering={enter} style={{ gap: theme.space(2) }}>
         <Text variant="title" accessibilityRole="header">
-          Mau cerita lebih?
+          {notice === 'leftover' ? 'Tersimpan. Mau cerita lebih?' : 'Mau cerita lebih?'}
         </Text>
-        {resumed ? <Text muted>Ceritamu tadi belum selesai. Ini lanjutannya, kalau kamu mau.</Text> : null}
+        {notice ? <Text muted>{NOTICE_TEXT[notice]}</Text> : null}
         <Text variant="caption" muted>
           {`${MOOD_LABELS[entry.mood]} · ${formatEntryTime(entry.createdAt)}`}
         </Text>
@@ -243,7 +266,7 @@ export default function NewEntryScreen() {
       {failedNote}
       <View style={{ gap: theme.space(2) }}>
         <Button label="Simpan detail" disabled={busy} onPress={() => onSaveDetails(entry)} />
-        <Button label="Nanti saja" variant="quiet" onPress={onLater} />
+        <Button label="Nanti saja" variant="quiet" disabled={busy} onPress={() => onLaterDetails(entry)} />
       </View>
     </Screen>
   );

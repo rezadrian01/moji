@@ -6,7 +6,7 @@ import { getDraft, saveDraft } from '@/db/settingsRepo';
 import { createTestDb } from '@/db/testing/sqljsDb';
 import { DbContext } from '@/db/useDbQuery';
 
-import { DRAFT_DEBOUNCE_MS, useDraft } from './draft';
+import { clearDraftFor, DRAFT_DEBOUNCE_MS, useDraft, type EntryDraft } from './draft';
 
 let db: Db;
 const wrapper = ({ children }: { children: React.ReactNode }) =>
@@ -91,5 +91,33 @@ describe('useDraft', () => {
     });
     await eventually(async () => expect(await getDraft(db)).toBeNull());
     expect(result.current.draft).toBeNull();
+  });
+});
+
+describe('clearDraftFor', () => {
+  it('removes a draft linked to the given entry', async () => {
+    const d: EntryDraft = { entryId: 'e1', mood: 2, note: 'x' };
+    await saveDraft(db, d);
+    await clearDraftFor(db, 'e1');
+    expect(await getDraft(db)).toBeNull();
+  });
+
+  it('keeps a draft for another entry or a draft without an entry', async () => {
+    const other: EntryDraft = { entryId: 'e2', mood: 2, note: 'x' };
+    await saveDraft(db, other);
+    await clearDraftFor(db, 'e1');
+    expect(await getDraft(db)).toEqual(other);
+
+    await saveDraft(db, { mood: 3 });
+    await clearDraftFor(db, 'e1');
+    expect(await getDraft(db)).toEqual({ mood: 3 });
+  });
+
+  it('round-trips entryId through useDraft', async () => {
+    const d: EntryDraft = { entryId: 'e9', mood: 1, note: 'y' };
+    await saveDraft(db, d);
+    const { result } = await renderHook(() => useDraft(), { wrapper });
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.draft?.entryId).toBe('e9');
   });
 });

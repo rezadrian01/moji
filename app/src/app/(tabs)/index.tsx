@@ -1,4 +1,5 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useRef } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -13,6 +14,7 @@ import { Screen } from '@/ui/Screen';
 import { Text } from '@/ui/Text';
 
 function greeting(hour: number): string {
+  if (hour < 4) return 'Hai';
   if (hour < 11) return 'Selamat pagi';
   if (hour < 15) return 'Selamat siang';
   if (hour < 18) return 'Selamat sore';
@@ -52,6 +54,18 @@ export default function HomeScreen() {
   const theme = useTheme();
   const { enter } = useCalmMotion();
   const { data: insight } = useDbQuery(latestInsight, ['insights'], []);
+  // Dua tap cepat tidak boleh membuka dua layar catatan; dibuka lagi setiap Beranda kembali tampil.
+  const opening = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      opening.current = false;
+    }, []),
+  );
+  const openNewEntry = (m: number) => {
+    if (opening.current) return;
+    opening.current = true;
+    router.push({ pathname: '/entry/new', params: { mood: String(m) } });
+  };
 
   return (
     <Screen scroll>
@@ -62,10 +76,7 @@ export default function HomeScreen() {
             Gimana perasaanmu sekarang?
           </Text>
         </View>
-        <MoodPicker
-          value={null}
-          onChange={(m) => router.push({ pathname: '/entry/new', params: { mood: String(m) } })}
-        />
+        <MoodPicker value={null} onChange={openNewEntry} />
       </Animated.View>
       {insight ? <InsightCard insight={insight} /> : null}
       <View style={{ alignItems: 'flex-start' }}>

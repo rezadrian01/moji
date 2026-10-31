@@ -1,12 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { Db } from '@/db/db';
 import { getDraft, saveDraft } from '@/db/settingsRepo';
 import { useDb } from '@/db/useDbQuery';
 import type { NewEntry } from '@/domain/types';
 
 export const DRAFT_DEBOUNCE_MS = 500;
 
-type Draft = Partial<NewEntry>;
+/**
+ * Draft yang disimpan di kv `draft`. `entryId` ada kalau draft berisi detail untuk catatan yang
+ * sudah tersimpan. Format JSON-nya tetap `Partial<NewEntry>` plus satu field opsional.
+ */
+export type EntryDraft = Partial<NewEntry> & { entryId?: string };
+type Draft = EntryDraft;
+
+/** Hapus draft kalau draft itu milik catatan `entryId` (mis. saat catatan dihapus). */
+export async function clearDraftFor(db: Db, entryId: string): Promise<void> {
+  const d = (await getDraft(db)) as EntryDraft | null;
+  if (d?.entryId === entryId) await saveDraft(db, null);
+}
 
 /**
  * Draft catatan yang sedang ditulis. `save` ditulis ke DB setelah jeda 500ms; draft yang masih
@@ -29,7 +41,7 @@ export function useDraft(): {
     getDraft(db).then(
       (d) => {
         if (cancelled) return;
-        setDraft(d);
+        setDraft(d as EntryDraft | null);
         setLoaded(true);
       },
       () => {

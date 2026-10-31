@@ -1,4 +1,5 @@
 /** @jest-environment ./src/domain/jakartaEnvironment.js */
+import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 import { Text } from 'react-native';
 
@@ -11,10 +12,11 @@ import type { Db } from '@/db/db';
 import { createEntry, getEntry, listEntries, updateEntry } from '@/db/entriesRepo';
 import { openAppDb } from '@/db/expoDb';
 import { saveInsight } from '@/db/insightsRepo';
-import { getDraft, updateSettings } from '@/db/settingsRepo';
+import { getDraft, saveDraft, updateSettings } from '@/db/settingsRepo';
 import { createTestDb } from '@/db/testing/sqljsDb';
 import type { Entry } from '@/domain/types';
 
+import type { EntryDraft } from './draft';
 import { runPostSave } from './postSave';
 
 jest.mock('@/db/expoDb', () => ({ openAppDb: jest.fn() }));
@@ -62,6 +64,12 @@ afterEach(() => {
 
 const press = async (name: string | RegExp) => fireEvent.press(await screen.findByRole('button', { name }));
 const pressRadio = async (name: string) => fireEvent.press(await screen.findByRole('radio', { name }));
+/** Dua tap dalam satu frame: kedua handler jalan sebelum React sempat render ulang. */
+const doubleTap = async (el: Parameters<typeof fireEvent.press>[0]) => {
+  await act(async () => {
+    await Promise.all([fireEvent.press(el), fireEvent.press(el)]);
+  });
+};
 /** Lewati jeda draft 500ms dan biarkan tulisan sql.js selesai. */
 const flushDraft = async () => {
   await act(async () => {
@@ -108,6 +116,9 @@ describe('Beranda', () => {
   });
 
   it.each([
+    ['00:00', 'Hai'],
+    ['03:59', 'Hai'],
+    ['04:00', 'Selamat pagi'],
     ['10:59', 'Selamat pagi'],
     ['11:00', 'Selamat siang'],
     ['14:59', 'Selamat siang'],
@@ -115,11 +126,23 @@ describe('Beranda', () => {
     ['17:59', 'Selamat sore'],
     ['18:00', 'Selamat malam'],
     ['23:59', 'Selamat malam'],
-    ['05:00', 'Selamat pagi'],
   ])('at %s WIB says "%s"', async (time, greeting) => {
     jest.setSystemTime(new Date(`2026-10-31T${time}:00+07:00`));
     await renderRouter(routes, { initialUrl: '/' });
     expect(await screen.findByText(greeting)).toBeOnTheScreen();
+  });
+
+  it('opens only one new entry when a mood is tapped twice quickly', async () => {
+    await renderRouter(routes, { initialUrl: '/' });
+    const mood = await screen.findByRole('radio', { name: 'Biasa' });
+    await doubleTap(mood);
+    await press('Simpan');
+    await press('Nanti saja');
+    expect(await screen.findByText('Gimana perasaanmu sekarang?')).toBeOnTheScreen();
+    expect(screen).toHavePathname('/');
+    // Setelah kembali, tap mood berikutnya tetap berfungsi.
+    await pressRadio('Baik');
+    await waitFor(() => expect(screen).toHavePathnameWithParams('/entry/new?mood=4'));
   });
 
   it('has "Butuh bantuan?" that opens help in one tap', async () => {
@@ -302,6 +325,23 @@ describe('entry/new', () => {
     expect(await getDraft(db)).toBeNull();
   });
 
+  it('links a detail draft to its entry by id', async () => {
+    await saveMoodAndOpenDetails();
+    await press('Tulisan bebas');
+    await fireEvent.changeText(screen.getByLabelText('Tulisan bebas, isi catatan'), 'x');
+    await flushDraft();
+    const entry = await onlyEntry();
+    expect(await getDraft(db)).toEqual({
+      entryId: entry.id,
+      mood: entry.mood,
+      createdAt: entry.createdAt,
+      note: 'x',
+      contexts: [],
+      experiences: [],
+      copings: [],
+    });
+  });
+
   it('backdates a catch-up entry with "Waktu: sekarang · Ubah"', async () => {
     await renderRouter(routes, { initialUrl: '/entry/new' });
     expect(await screen.findByText('Waktu: sekarang')).toBeOnTheScreen();
@@ -313,6 +353,123 @@ describe('entry/new', () => {
     await press('Simpan');
     await screen.findByText('Tersimpan. Mau cerita lebih?');
     expect((await onlyEntry()).createdAt).toBe('2026-10-29T21:30:00.000+07:00');
+  });
+
+  it('double-tapping "Simpan" saves exactly one entry', async () => {
+    await renderRouter(routes, { initialUrl: '/entry/new?mood=3' });
+    const save = await screen.findByRole('button', { name: 'Simpan' });
+    await doubleTap(save);
+    await screen.findByText('Tersimpan. Mau cerita lebih?');
+    await onlyEntry();
+    expect(mockedRunPostSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('double-tapping "Simpan detail" saves once', async () => {
+    await saveMoodAndOpenDetails();
+    await press('Tulisan bebas');
+    await fireEvent.changeText(screen.getByLabelText('Tulisan bebas, isi catatan'), 'sekali saja');
+    const save = screen.getByRole('button', { name: 'Simpan detail' });
+    await doubleTap(save);
+    await eventually(async () => expect((await onlyEntry()).note).toBe('sekali saja'));
+    expect(mockedRunPostSave).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('entry/new: typed text is never lost, a tapped mood is always saved (R11)', () => {
+  const details = { contexts: [], experiences: [], copings: [] };
+
+  it('a mood tapped on Beranda starts a new entry; the leftover story goes into its own entry first', async () => {
+    const a = await createEntry(db, { mood: 2 }, new Date('2026-10-30T20:00:00+07:00'));
+    const leftover: EntryDraft = { entryId: a.id, mood: 2, createdAt: a.createdAt, note: 'cerita lama', ...details };
+    await saveDraft(db, leftover);
+
+    await renderRouter(routes, { initialUrl: '/entry/new?mood=1' });
+    expect(await screen.findByRole('radio', { name: 'Sangat berat' })).toBeChecked();
+    expect(screen.getByText('Waktu: sekarang')).toBeOnTheScreen();
+    await eventually(async () => expect((await getEntry(db, a.id))?.note).toBe('cerita lama'));
+    await eventually(async () => expect(await getDraft(db)).toBeNull());
+    expect(mockedRunPostSave).toHaveBeenCalledWith(
+      expect.objectContaining({ id: a.id, note: 'cerita lama' }),
+      expect.anything(),
+    );
+
+    await press('Simpan');
+    expect(await screen.findByText('Ceritamu yang sebelumnya sudah tersimpan.')).toBeOnTheScreen();
+    const all = await listEntries(db, {});
+    expect(all).toHaveLength(2);
+    expect(all.find((e) => e.id !== a.id)).toMatchObject({
+      mood: 1,
+      note: null,
+      createdAt: '2026-10-31T10:00:00.000+07:00',
+    });
+  });
+
+  it('never applies a stale draft time to a newly tapped mood', async () => {
+    await saveDraft(db, { mood: 2, createdAt: '2026-10-20T08:00:00.000+07:00' });
+    await renderRouter(routes, { initialUrl: '/entry/new?mood=4' });
+    expect(await screen.findByText('Waktu: sekarang')).toBeOnTheScreen();
+    await press('Simpan');
+    await screen.findByText('Tersimpan. Mau cerita lebih?');
+    expect(await onlyEntry()).toMatchObject({ mood: 4, createdAt: '2026-10-31T10:00:00.000+07:00' });
+  });
+
+  it('restores an unsaved mood and time when opened without a mood', async () => {
+    await saveDraft(db, { mood: 2, createdAt: '2026-10-20T08:00:00.000+07:00' });
+    await renderRouter(routes, { initialUrl: '/entry/new' });
+    expect(await screen.findByText('Waktu: Selasa, 20 Okt 2026 · 08.00')).toBeOnTheScreen();
+    expect(screen.getByRole('radio', { name: 'Kurang baik' })).toBeChecked();
+  });
+
+  it('shows text whose entry is gone in the new entry instead of attaching it silently', async () => {
+    const orphan: EntryDraft = {
+      entryId: 'sudah-dihapus',
+      mood: 2,
+      createdAt: '2026-10-30T20:00:00.000+07:00',
+      note: 'teks yang tertinggal',
+      ...details,
+    };
+    await saveDraft(db, orphan);
+    await renderRouter(routes, { initialUrl: '/entry/new?mood=3' });
+    await press('Simpan');
+
+    expect(await screen.findByText('Tulisanmu sebelumnya masih ada di sini.')).toBeOnTheScreen();
+    expect(screen.getByDisplayValue('teks yang tertinggal')).toBeOnTheScreen();
+    const fresh = await onlyEntry();
+    expect(fresh).toMatchObject({ mood: 3, note: null });
+    // Teksnya kini menempel di draft catatan baru, jadi tetap aman kalau aplikasi tertutup.
+    await flushDraft();
+    expect(await getDraft(db)).toMatchObject({ entryId: fresh.id, note: 'teks yang tertinggal' });
+
+    await press('Simpan detail');
+    await eventually(async () => expect((await onlyEntry()).note).toBe('teks yang tertinggal'));
+  });
+
+  it('"Nanti saja" on the details stage keeps what was typed', async () => {
+    await renderRouter(routes, { initialUrl: '/' });
+    await pressRadio('Kurang baik');
+    await press('Simpan');
+    await press('Ceritain lebih');
+    await press('Tulisan bebas');
+    await fireEvent.changeText(screen.getByLabelText('Tulisan bebas, isi catatan'), 'tadi sempat nulis');
+    await press('Nanti saja');
+
+    await eventually(async () => expect((await onlyEntry()).note).toBe('tadi sempat nulis'));
+    expect(await screen.findByText('Gimana perasaanmu sekarang?')).toBeOnTheScreen();
+    expect(screen).toHavePathname('/');
+    await flushDraft();
+    expect(await getDraft(db)).toBeNull();
+    expect(mockedRunPostSave).toHaveBeenCalledTimes(2);
+  });
+
+  it('"Nanti saja" on the details stage with nothing typed just leaves', async () => {
+    await renderRouter(routes, { initialUrl: '/' });
+    await pressRadio('Kurang baik');
+    await press('Simpan');
+    await press('Ceritain lebih');
+    await press('Nanti saja');
+    expect(await screen.findByText('Gimana perasaanmu sekarang?')).toBeOnTheScreen();
+    expect(await onlyEntry()).toMatchObject({ mood: 2, note: null });
+    expect(mockedRunPostSave).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -359,9 +516,8 @@ describe('entry/[id]', () => {
     await renderRouter(routes, { initialUrl: `/entry/${e.id}` });
     await press('Hapus');
     const dialog = within(await screen.findByLabelText('Konfirmasi hapus catatan'));
-    expect(
-      dialog.getByText('Hapus catatan ini? Catatan yang dihapus tidak bisa dikembalikan.'),
-    ).toBeOnTheScreen();
+    expect(dialog.getByText('Hapus catatan ini?')).toBeOnTheScreen();
+    expect(dialog.getByText('Catatan yang dihapus tidak bisa dikembalikan.')).toBeOnTheScreen();
     await fireEvent.press(dialog.getByRole('button', { name: 'Batal' }));
     await waitFor(() => expect(screen.queryByLabelText('Konfirmasi hapus catatan')).toBeNull());
     expect(await getEntry(db, e.id)).not.toBeNull();
@@ -375,6 +531,111 @@ describe('entry/[id]', () => {
     await fireEvent.press(dialog.getByRole('button', { name: 'Hapus' }));
     await eventually(async () => expect(await getEntry(db, e.id)).toBeNull());
     await waitFor(() => expect(screen).toHavePathname('/'));
+  });
+
+  async function deleteViaSheet() {
+    await press('Hapus');
+    const dialog = within(await screen.findByLabelText('Konfirmasi hapus catatan'));
+    await fireEvent.press(dialog.getByRole('button', { name: 'Hapus' }));
+  }
+
+  it('deleting an entry also clears the detail draft linked to it', async () => {
+    const e = await seed();
+    const linked: EntryDraft = { entryId: e.id, mood: e.mood, createdAt: e.createdAt, note: 'draft lama' };
+    await saveDraft(db, linked);
+    await renderRouter(routes, { initialUrl: `/entry/${e.id}` });
+    await deleteViaSheet();
+    await eventually(async () => expect(await getEntry(db, e.id)).toBeNull());
+    await eventually(async () => expect(await getDraft(db)).toBeNull());
+  });
+
+  it('deleting an entry keeps a draft that belongs to another entry', async () => {
+    const e = await seed();
+    const other: EntryDraft = { entryId: 'catatan-lain', mood: 4, createdAt: e.createdAt, note: 'punya yang lain' };
+    await saveDraft(db, other);
+    await renderRouter(routes, { initialUrl: `/entry/${e.id}` });
+    await deleteViaSheet();
+    await eventually(async () => expect(await getEntry(db, e.id)).toBeNull());
+    expect(await getDraft(db)).toEqual(other);
+  });
+
+  it('tells the user gently when deleting fails', async () => {
+    const e = await seed();
+    await renderRouter(routes, { initialUrl: `/entry/${e.id}` });
+    await screen.findByText('deadline numpuk, capek banget');
+    jest.spyOn(db, 'withTransactionAsync').mockRejectedValueOnce(new Error('disk penuh'));
+    await deleteViaSheet();
+    expect(await screen.findByText('Catatannya belum terhapus. Coba sekali lagi, ya.')).toBeOnTheScreen();
+    expect(await getEntry(db, e.id)).not.toBeNull();
+  });
+
+  it('shows an unanswered coping as "(belum tahu)"', async () => {
+    const e = await seed({ copings: [{ tag: 'coping.dengar-musik', helped: 'belum_tahu' }] });
+    await renderRouter(routes, { initialUrl: `/entry/${e.id}` });
+    expect(await screen.findByText('dengar musik (belum tahu)')).toBeOnTheScreen();
+  });
+
+  it('"Batal" in edit mode without changes goes straight back to the entry', async () => {
+    const e = await seed();
+    await renderRouter(routes, { initialUrl: `/entry/${e.id}` });
+    await press('Ubah');
+    await press('Batal');
+    expect(await screen.findByRole('button', { name: 'Ubah' })).toBeOnTheScreen();
+    expect(screen.queryByText('Simpan perubahan?')).toBeNull();
+  });
+
+  async function editNote(text: string) {
+    await press('Ubah');
+    await fireEvent.changeText(await screen.findByLabelText('Tulisan bebas, isi catatan'), text);
+  }
+
+  it('"Batal" with unsaved changes asks first, and "Buang" drops them', async () => {
+    const e = await seed();
+    await renderRouter(routes, { initialUrl: `/entry/${e.id}` });
+    await editNote('versi baru');
+    await press('Batal');
+    const ask = within(await screen.findByLabelText('Simpan perubahan?'));
+    await fireEvent.press(ask.getByRole('button', { name: 'Buang' }));
+    expect(await screen.findByText('deadline numpuk, capek banget')).toBeOnTheScreen();
+    expect((await getEntry(db, e.id))?.note).toBe('deadline numpuk, capek banget');
+  });
+
+  it('"Batal" with unsaved changes can still save them', async () => {
+    const e = await seed();
+    await renderRouter(routes, { initialUrl: `/entry/${e.id}` });
+    await editNote('versi baru');
+    await press('Batal');
+    const ask = within(await screen.findByLabelText('Simpan perubahan?'));
+    await fireEvent.press(ask.getByRole('button', { name: 'Simpan' }));
+    await eventually(async () => expect((await getEntry(db, e.id))?.note).toBe('versi baru'));
+    expect(await screen.findByText('versi baru')).toBeOnTheScreen();
+  });
+
+  it('going back with unsaved changes asks first', async () => {
+    const e = await seed();
+    await renderRouter(routes, { initialUrl: '/' });
+    await screen.findByText('Gimana perasaanmu sekarang?');
+    await act(async () => {
+      router.push({ pathname: '/entry/[id]', params: { id: e.id } });
+    });
+    await editNote('versi baru');
+    await act(async () => {
+      router.back();
+    });
+    const ask = within(await screen.findByLabelText('Simpan perubahan?'));
+    await fireEvent.press(ask.getByRole('button', { name: 'Buang' }));
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect((await getEntry(db, e.id))?.note).toBe('deadline numpuk, capek banget');
+  });
+
+  it('says the entry is gone when it was deleted elsewhere while editing', async () => {
+    const e = await seed();
+    await renderRouter(routes, { initialUrl: `/entry/${e.id}` });
+    await editNote('versi baru');
+    // Terhapus di tempat lain tanpa event, jadi layar baru tahu saat menyimpan.
+    await db.runAsync('DELETE FROM entries WHERE id = ?', [e.id]);
+    await press('Simpan perubahan');
+    expect(await screen.findByText('Catatan ini sudah tidak ada.')).toBeOnTheScreen();
   });
 
   it('"Ubah" opens the details form and saves changes, rerunning post-save', async () => {

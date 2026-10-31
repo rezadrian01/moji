@@ -88,3 +88,67 @@ GREEN: `Tests: 32 passed, 32 total`
 5. **Mode edit di `entry/[id]` tidak memakai draft.** `useDraft` bertipe `Partial<NewEntry>` dan tidak membawa id, jadi draft hanya dipakai untuk catatan baru.
 6. **`useDraft` menambah field `loaded`** di luar signature brief. Perubahannya kompatibel ke belakang.
 7. **Pola test untuk task lain:** di file yang memakai `renderRouter` (fake timers), hindari mengakhiri test dengan `waitFor(async () => …)`, karena update React di test berikutnya bisa tidak ter-flush tanpa pesan apa pun. Lihat helper `eventually()` di `EntryFlow.test.tsx`.
+
+## Fix round 1
+
+Temuan code review dan wellbeing review soal logika draft, dengan aturan controller **R11**: teks jurnal yang sudah diketik tidak pernah dibuang diam-diam, dan mood yang di-tap di Beranda selalu disimpan.
+
+### Perubahan
+
+1. **`entry/new?mood=N` selalu memulai catatan baru** di tahap pick, dengan mood N sudah terpilih dan waktu = sekarang. `createdAt` dari draft lama tidak pernah ikut terbawa. Kalau ada draft detail sisa yang catatannya masih ada, detailnya disimpan dulu ke catatan itu lewat `updateEntry` + `runPostSave`, lalu draft dihapus, tanpa prompt. Layar "Tersimpan" kemudian menampilkan "Ceritamu yang sebelumnya sudah tersimpan." Dibuka tanpa `?mood=`, draft detail untuk catatan yang masih ada tetap dilanjutkan, seperti sebelumnya.
+2. **"Nanti saja" di tahap detail** menyimpan detail yang sudah diisi ke catatannya, menghapus draft, lalu keluar. Kalau belum ada yang diisi, langsung keluar.
+3. **Draft menyimpan `entryId`** (`EntryDraft = Partial<NewEntry> & { entryId?: string }`). Format JSON-nya kompatibel ke belakang, dan pencocokan lewat `createdAt` + mood tidak dipakai lagi.
+   - Menghapus catatan di `entry/[id]` memanggil `clearDraftFor(db, id)`, yang hanya menghapus draft milik catatan itu.
+   - Draft detail yang catatannya sudah tidak ada tidak ditempelkan ke catatan baru. Setelah "Simpan", catatan baru dibuat dengan mood saja, lalu tahap detail menampilkan teks itu dengan baris "Tulisanmu sebelumnya masih ada di sini." Pada saat itu draft sudah ditautkan ke id catatan baru.
+4. **Guard double-tap** (`useRef` in-flight) untuk "Simpan", "Simpan detail", dan "Nanti saja" (detail) di `entry/new`, serta "Simpan perubahan" di `entry/[id]`. Tap mood di Beranda juga di-guard, dan guard-nya di-reset lewat `useFocusEffect`.
+5. **Sapaan:** 0–3 "Hai", 4–10 "Selamat pagi", 11–14 "Selamat siang", 15–17 "Selamat sore", 18–23 "Selamat malam".
+6. **`entry/[id]`:**
+   - kalau hapus gagal: "Catatannya belum terhapus. Coba sekali lagi, ya.";
+   - sheet hapus berjudul "Hapus catatan ini?" dengan isi "Catatan yang dihapus tidak bisa dikembalikan." serta tombol "Batal" (utama) dan "Hapus";
+   - mode edit: "Batal" atau kembali (header/back, lewat `usePreventRemove` dari expo-router) dengan perubahan yang belum disimpan memunculkan "Simpan perubahan?" dengan pilihan "Simpan" / "Buang";
+   - kalau `updateEntry` mengembalikan `null` (catatan terhapus di tempat lain), layar menampilkan "Catatan ini sudah tidak ada.".
+7. `HELPED_TEXT.belum_tahu` → "(belum tahu)". Duplikasi `usePostSave` dipindahkan ke `app/src/features/entry/usePostSave.ts`. Hook ini tetap tidak meng-await `runPostSave` dan tetap meng-catch error di langkah lokal.
+
+### Bukti TDD
+
+RED, `npx jest src/features/entry/draft src/features/entry/EntryFlow` (setelah test baru ditulis, sebelum implementasi):
+```
+TypeError: (0 , _draft.clearDraftFor) is not a function
+● Beranda › at 00:00 WIB says "Hai" / at 03:59 WIB says "Hai"
+● Beranda › opens only one new entry when a mood is tapped twice quickly
+    Expected: "/"   Received: "/entry/new"
+● entry/new › double-tapping "Simpan" saves exactly one entry
+    Expected length: 1   Received length: 2
+● ... a mood tapped on Beranda starts a new entry; the leftover story goes into its own entry first
+    Unable to find an element with role: radio, name: Sangat berat
+● ... "Nanti saja" on the details stage keeps what was typed
+    Expected: "tadi sempat nulis"   Received: null
+● entry/[id] › deleting an entry also clears the detail draft linked to it
+    Received: {"entryId": "5eafa1de-...", "mood": 2, "note": "draft lama", ...}
+Tests:       20 failed, 41 passed, 61 total
+```
+Beberapa test baru langsung lulus karena menjaga perilaku yang sudah benar: pulihkan mood/waktu tanpa `?mood=`, "Nanti saja" tanpa isi, draft milik catatan lain tetap ada, round-trip `entryId`, dan "Batal" tanpa perubahan.
+
+Catatan teknik test: double-tap disimulasikan dengan dua `fireEvent.press` di dalam **satu** `act`, sehingga kedua handler jalan sebelum React render ulang. `Promise.all` atas dua `fireEvent` di level atas membuat dua `act` tumpang tindih, dan itu meracuni test-test berikutnya.
+
+GREEN:
+```
+npx jest src/features/entry → Tests: 109 passed, 109 total
+```
+
+### Hasil
+
+- `npm test`: **33 suites, 372 tests passed**
+- `npm run typecheck`: bersih
+- `npm run lint`: bersih (sempat ada temuan `react-hooks/set-state-in-effect`; diperbaiki dengan ref)
+
+### File
+
+- Modify: `app/src/app/(tabs)/index.tsx`, `app/src/app/entry/new.tsx`, `app/src/app/entry/[id].tsx`, `app/src/features/entry/draft.ts`, `EntryFlow.test.tsx`, `draft.test.ts`
+- Create: `app/src/features/entry/usePostSave.ts`
+
+### Concern yang tersisa
+
+- Concern 1–4 dan 6 di atas sudah selesai. Concern 5 tetap: mode edit di `entry/[id]` tidak ditulis ke draft, tetapi perubahannya kini dilindungi prompt "Simpan perubahan?".
+- `usePostSave` tidak punya test unit sendiri; perilakunya (tidak di-await, error lokal ditelan) diuji lewat `EntryFlow.test.tsx`.
+- Kalau `updateEntry` gagal saat menyimpan draft sisa secara otomatis, teksnya diperlakukan seperti draft yang catatannya hilang: ditampilkan di catatan baru, tidak dibuang.
