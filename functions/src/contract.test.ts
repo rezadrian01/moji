@@ -55,9 +55,9 @@ describe('contract schemas reject invalid input', () => {
   it('empty text', () => {
     expect(AnalyzeEntryRequestSchema.safeParse({ ...analyzeReq, text: '' }).success).toBe(false);
   });
-  it('text over 5000 chars, accepts exactly 5000', () => {
-    expect(AnalyzeEntryRequestSchema.safeParse({ ...analyzeReq, text: 'a'.repeat(5001) }).success).toBe(false);
-    expect(AnalyzeEntryRequestSchema.safeParse({ ...analyzeReq, text: 'a'.repeat(5000) }).success).toBe(true);
+  it('text over 20000 chars, accepts exactly 20000', () => {
+    expect(AnalyzeEntryRequestSchema.safeParse({ ...analyzeReq, text: 'a'.repeat(20001) }).success).toBe(false);
+    expect(AnalyzeEntryRequestSchema.safeParse({ ...analyzeReq, text: 'a'.repeat(20000) }).success).toBe(true);
   });
   it('mood out of range', () => {
     expect(AnalyzeEntryRequestSchema.safeParse({ ...analyzeReq, mood: 6 }).success).toBe(false);

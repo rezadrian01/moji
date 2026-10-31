@@ -7,7 +7,7 @@ import { takePendingSafety } from '../../db/pendingSafetyRepo';
 import { getSettings, updateSettings } from '../../db/settingsRepo';
 import { createTestDb } from '../../db/testing/sqljsDb';
 import type { Entry, NewEntry, RiskLevel, Suggestions } from '../../domain/types';
-import { buildAnalyzeRequest, runPostSave, type PostSaveDeps } from './postSave';
+import { buildAnalyzeRequest, MAX_ANALYZE_TEXT_LENGTH, runPostSave, type PostSaveDeps } from './postSave';
 
 jest.mock('expo-crypto', () => ({ randomUUID: () => globalThis.crypto.randomUUID() }));
 
@@ -67,6 +67,26 @@ describe('buildAnalyzeRequest', () => {
     expect(req!.options.contexts.map((o) => o.id)).not.toContain('akademik.deadline');
     expect(req!.options.experiences).toContainEqual({ id: 'emosi.cemas', label: 'cemas' });
     expect(req!.options.copings).toContainEqual({ id: 'coping.dengar-musik', label: 'dengar musik' });
+  });
+
+  it('keeps a long note under the 20000-char server limit by keeping its end', async () => {
+    const note = `${'a'.repeat(15000)}${'b'.repeat(10000)}akhir catatan`;
+    const req = buildAnalyzeRequest(await save({ mood: 2, note }));
+    expect(req!.text).toHaveLength(MAX_ANALYZE_TEXT_LENGTH);
+    expect(MAX_ANALYZE_TEXT_LENGTH).toBe(20000);
+    expect(req!.text.endsWith('akhir catatan')).toBe(true);
+    expect(req!.text.startsWith('a')).toBe(true);
+  });
+
+  it('sends a note of exactly 20000 chars unchanged', async () => {
+    const note = 'x'.repeat(20000);
+    expect(buildAnalyzeRequest(await save({ mood: 2, note }))!.text).toBe(note);
+  });
+
+  it('does not start the cut text with half of an emoji', async () => {
+    const note = `😭${'a'.repeat(19999)}`; // 20001 UTF-16 units
+    const text = buildAnalyzeRequest(await save({ mood: 2, note }))!.text;
+    expect(text).toBe('a'.repeat(19999));
   });
 });
 

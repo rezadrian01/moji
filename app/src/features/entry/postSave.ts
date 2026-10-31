@@ -31,11 +31,21 @@ const isHigher = (level: RiskLevel, than: RiskLevel) => RANK[level] > RANK[than]
 
 const DAY_MS = 24 * 3_600_000;
 
+/** Sama dengan batas `text` di functions/src/contract.ts (unit UTF-16). */
+export const MAX_ANALYZE_TEXT_LENGTH = 20000;
+
+/** Bagian akhir teks dipertahankan; surrogate yang terpotong separuh di awal dibuang. */
+function keepEnd(text: string): string {
+  if (text.length <= MAX_ANALYZE_TEXT_LENGTH) return text;
+  const cut = text.slice(-MAX_ANALYZE_TEXT_LENGTH);
+  return /^[\uDC00-\uDFFF]/.test(cut) ? cut.slice(1) : cut;
+}
+
 /** null jika catatan tidak punya teks (kosong/whitespace): AI tidak dipanggil. */
 export function buildAnalyzeRequest(entry: Entry): AnalyzeEntryRequest | null {
   const text = entry.note?.trim();
   if (!text) return null;
-  return { text, mood: entry.mood, options: OPTIONS };
+  return { text: keepEnd(text), mood: entry.mood, options: OPTIONS };
 }
 
 /**
