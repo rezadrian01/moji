@@ -12,3 +12,6 @@
 .env
 .env.*
 !.env.example
+
+# skrip run-demo.sh
+.run/
