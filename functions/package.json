@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "gcp-build": "tsc -p tsconfig.build.json",
     "start": "functions-framework --target=api",
-    "invites": "tsc -p tsconfig.build.json && node dist/admin/invites.js"
+    "invites": "tsc -p tsconfig.build.json && node dist/admin/invites.js",
+    "eval": "tsc -p tsconfig.eval.json && node dist-eval/eval/run.js"
   },
   "dependencies": {
     "@google-cloud/firestore": "^9.4.0",

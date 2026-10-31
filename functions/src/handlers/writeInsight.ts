@@ -6,7 +6,7 @@ import type { Deps, HandlerResult } from '../router.js';
 
 const isResponse = (x: unknown): x is WriteInsightResponse => WriteInsightResponseSchema.safeParse(x).success;
 
-export async function handleWriteInsight(body: unknown, deps: Deps): Promise<HandlerResult> {
+export async function handleWriteInsight(body: unknown, deps: Pick<Deps, 'gemini'>): Promise<HandlerResult> {
   const parsed = WriteInsightRequestSchema.safeParse(body);
   if (!parsed.success) return { status: 400, body: { error: 'bad_request' }, reason: 'bad_request' };
   const req = parsed.data;
