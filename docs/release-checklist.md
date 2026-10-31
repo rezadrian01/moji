@@ -28,7 +28,7 @@ Centang setiap butir sebelum membagikan APK. Semua langkah di bawah dikerjakan m
 - [ ] Login `eas login`, lalu dari `app/` jalankan `eas update:configure` sekali. Perintah ini menambah `updates.url` dan `extra.eas.projectId` ke `app.json`. Commit hasilnya sebelum build pertama.
 - [ ] `runtimeVersion` memakai policy `appVersion`. **Naikkan `version` di `app.json` setiap kali ada perubahan kode native atau dependency native**; update OTA hanya diterima build dengan versi yang sama.
 - [ ] Profil `preview` di `eas.json` memakai channel `preview` dan environment EAS `preview`; profil `development` memakai environment `development`.
-- [ ] `versionCode` Android dikelola EAS (`cli.appVersionSource: "remote"`, `autoIncrement: true` di profil `preview`), jadi setiap build preview mendapat `versionCode` lebih tinggi. Sebelum build pertama, jalankan `eas build:version:set` sekali untuk mengisi nilai awal.
+- [ ] `versionCode` Android dikelola EAS (`cli.appVersionSource: "remote"`, `autoIncrement: true` di profil `preview`), jadi setiap build preview mendapat `versionCode` lebih tinggi. Opsional: `eas build:version:set` untuk menentukan nilai awal secara manual.
 - [ ] Update JS saja dikirim dengan `eas update --channel preview --message "<pesan>" --environment preview`.
 
 ## 5. Uji manual di HP Android (spec §10)
