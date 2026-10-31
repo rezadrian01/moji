@@ -82,9 +82,38 @@ npm run invites -- create 1 --prefix T        # 1 kode uji untuk tim
 npm run invites -- list
 ```
 
+Contoh keluaran `create`:
+
+```
+label,code
+R01,MOJI-R01-TFHV
+R02,MOJI-R02-8KQM
+```
+
+**Arti opsi dan perilakunya:**
+- **Angka** adalah jumlah kode yang dibuat.
+- **`--prefix`** adalah huruf penanda kelompok (default `R`). Contohnya `R` untuk responden dan `T` untuk tim atau uji.
+- Nomor urut **melanjutkan** kode yang sudah ada, jadi menjalankan `create` lagi tidak membuat kode yang bentrok.
 - Kode tersimpan di `functions/data/invites.json`. File ini di-gitignore dan **tidak pernah di-commit**.
-- Simpan daftar "kode → siapa" di luar repo.
-- Cabut kode yang tidak dipakai dengan `npm run invites -- revoke MOJI-T11-XXXX`.
+- Server membaca ulang file itu di setiap request, jadi kode baru **langsung bisa dipakai tanpa restart server**.
+- Untuk mode demo lokal (`MOJI_STORE=file`) **tidak perlu login Google**. Cukup `functions/.env` yang sudah terisi.
+
+**Perintah lain:**
+
+```bash
+npm run invites -- list                    # semua kode, status aktif, dan pemakaian hari ini
+npm run invites -- revoke MOJI-R12-XXXX    # nonaktifkan satu kode (bocor / tidak dipakai)
+```
+
+Kode yang dicabut langsung ditolak server. Pemakainya melihat pesan "Kode undanganmu sudah tidak aktif", dan aplikasi tetap jalan tanpa AI.
+
+**Aturan dan tips:**
+- Satu kode untuk satu orang.
+- Batas pemakaian AI: **50 request per kode per hari** dan **1.000 request per hari untuk semua kode**. Hitungan reset pukul 00:00 WIB. Batas ini bisa diubah lewat `MOJI_PER_CODE_LIMIT` dan `MOJI_GLOBAL_LIMIT` di `functions/.env`.
+- Simpan daftar "kode → siapa" **di luar repo**, misalnya langsung ke file pribadi:
+  ```bash
+  npm run invites -- create 5 --prefix R >> ~/moji-private/kode-responden.csv
+  ```
 
 ### 5. (Opsional) `app/.env.local`
 

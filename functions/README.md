@@ -64,7 +64,11 @@ Build: `package.json` `main` menunjuk `dist/index.js`, sedangkan `dist/` tidak i
 
 ## Kode undangan
 
-Butuh kredensial ADC (`gcloud auth application-default login`) dan `GOOGLE_CLOUD_PROJECT`.
+Store yang dipakai mengikuti `MOJI_STORE` di `.env`:
+- `file` (default, mode demo lokal): kode disimpan di `MOJI_INVITES_FILE`. Tidak perlu login Google.
+- `firestore`: butuh kredensial ADC (`gcloud auth application-default login`) dan `GOOGLE_CLOUD_PROJECT`.
+
+`--prefix` adalah huruf penanda kelompok (default `R`), dan nomor urutnya melanjutkan kode yang sudah ada. Kode baru langsung terbaca server tanpa restart. Panduan lengkapnya ada di `docs/RUNNING.md` (Persiapan langkah 4).
 
 ```bash
 npm run invites -- create 20 --prefix R   # mencetak CSV label,code ke stdout
