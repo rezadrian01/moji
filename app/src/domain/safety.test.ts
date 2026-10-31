@@ -7,8 +7,8 @@ describe('normalizeText', () => {
     expect(normalizeText('gk kuat lg...')).toBe('tidak kuat lagi');
   });
 
-  it('keeps doubled letters in normal words', () => {
-    expect(normalizeText('kopi pagi dan aamiin')).toBe('kopi pagi dan aamiin');
+  it('collapses doubled letters consistently (phrases get the same treatment)', () => {
+    expect(normalizeText('kopi pagi dan aamiin')).toBe('kopi pagi dan amin');
   });
 
   it('maps first-person slang to aku', () => {
@@ -32,6 +32,47 @@ describe('checkLocalSafety', () => {
     ['deadline bikin capek', 'none'],
     ['kuat banget hari ini', 'none'],
     ['', 'none'],
+    // R5: runs of >= 2 identical letters
+    ['pengen matii aja', 'urgent'],
+    ['bunuh dirii', 'urgent'],
+    ['pengenn mati', 'urgent'],
+    // R8: proximity death wishes
+    ['mending gue mati', 'urgent'],
+    ['lebih baik aku mati', 'urgent'],
+    ['pengen cepet mati', 'urgent'],
+    ['mau aku mati aja', 'urgent'],
+    ['kapan ya aku mati', 'urgent'],
+    ['mati lampu lagi', 'none'],
+    ['mau mati gaya', 'none'],
+    // slang additions
+    ['gak ada yg peduli', 'concern'],
+    ['gada yang sayang sama aq', 'concern'],
+    ['ngga sanggup lagi', 'concern'],
+    ['ndak kuat lg', 'concern'],
+    ['capek banget idup', 'concern'],
+    ['pengen ilang', 'concern'],
+    // new urgent phrases
+    ['bundir', 'urgent'],
+    ['selfharm', 'urgent'],
+    ['suisid', 'urgent'],
+    ['pengen tidur selamanya', 'urgent'],
+    ['dunia lebih baik tanpa gue', 'urgent'],
+    ['nyilet lagi', 'urgent'],
+    ['sayat nadi', 'urgent'],
+    ['mau terjun dari jembatan', 'urgent'],
+    ['minum baygon', 'urgent'],
+    ['tidak ingin bangun lagi', 'urgent'],
+    ['mati saja', 'urgent'],
+    // new concern phrases
+    ['tidak sanggup lagi', 'concern'],
+    ['pengen nyerah', 'concern'],
+    ['benci diri sendiri', 'concern'],
+    ['males idup', 'concern'],
+    ['tidak ada yang butuh gue', 'concern'],
+    ['merepotkan semua orang', 'concern'],
+    // accepted false positives (conservative, see docs/safety-phrases.md)
+    ['mau mati lampu', 'urgent'],
+    ['aku tidak mau mati', 'urgent'],
   ])('%s -> %s', (text, expected) => {
     expect(checkLocalSafety(text)).toBe(expected);
   });
@@ -89,10 +130,16 @@ describe('isWorsening', () => {
   it('true: 5 of last 7 are mood 1 within 6 days', () => {
     expect(isWorsening(sixDays(), NOW, null)).toBe(true);
   });
-  it('false: 7th entry is 8 days old', () => {
-    const r = sixDays();
-    r[6] = entry(3, 8 * 24);
+  it('true: 5 mood-1 entries in last 5 days plus 2 older entries', () => {
+    const r = [entry(1, 2), entry(1, 24), entry(1, 48), entry(1, 72), entry(1, 96), entry(3, 9 * 24), entry(3, 10 * 24)];
+    expect(isWorsening(r, NOW, null)).toBe(true);
+  });
+  it('false: entries older than 7 days do not count', () => {
+    const r = [entry(1, 2), entry(1, 24), entry(1, 48), entry(1, 72), entry(1, 8 * 24), entry(1, 9 * 24)];
     expect(isWorsening(r, NOW, null)).toBe(false);
+  });
+  it('treats an unparseable lastPromptAt as no previous prompt', () => {
+    expect(isWorsening(sixDays(), NOW, 'bukan-tanggal')).toBe(true);
   });
   it('false: only 4 are mood 1', () => {
     const r = sixDays();
