@@ -1,0 +1,28 @@
+{
+  "text": "Besok presentasi skripsi bab 3 dan aku belum siap sama sekali. Dari tadi cuma bisa mikirin kalau dosennya nanya yang aneh-aneh, jadi susah tidur.",
+  "mood": 2,
+  "options": {
+    "contexts": [
+      { "id": "akademik", "label": "Akademik" },
+      { "id": "interpersonal", "label": "Hubungan dengan orang lain" },
+      { "id": "internal", "label": "Diri sendiri" },
+      { "id": "finansial", "label": "Keuangan" },
+      { "id": "media", "label": "Media & hiburan" },
+      { "id": "tak_terduga", "label": "Kejadian tak terduga" }
+    ],
+    "experiences": [
+      { "id": "emosi.cemas", "label": "cemas" },
+      { "id": "emosi.sedih", "label": "sedih" },
+      { "id": "fisik.lelah", "label": "lelah" },
+      { "id": "fisik.sulit-tidur", "label": "sulit tidur" },
+      { "id": "pikiran.overthinking", "label": "overthinking" },
+      { "id": "pikiran.sulit-fokus", "label": "sulit fokus" }
+    ],
+    "copings": [
+      { "id": "coping.dengar-musik", "label": "dengar musik" },
+      { "id": "coping.cerita-ke-teman", "label": "cerita ke teman" },
+      { "id": "coping.istirahat-tidur", "label": "istirahat/tidur" },
+      { "id": "coping.menulis", "label": "menulis" }
+    ]
+  }
+}

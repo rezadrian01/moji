@@ -1,0 +1,11 @@
+{
+  "text": "Minggu ini kamu mencatat 6 kali. Beberapa hari terasa cukup berat, dan hal-hal seputar kuliah sering muncul di catatan itu.",
+  "patternTexts": {
+    "low_mood_context:akademik": "Dari 4 catatan yang menyebut Akademik, 3 di antaranya hari yang terasa berat. Mungkin ini bagian dari minggu ini yang menyita tenagamu.",
+    "helpful_coping:coping.dengar-musik": "Kamu 3 kali bilang dengar musik membantu. Kelihatannya itu salah satu hal yang bisa menemanimu."
+  },
+  "questions": [
+    "Dari urusan kuliah minggu ini, mana yang paling menguras tenagamu?",
+    "Kapan kamu bisa menyisihkan waktu untuk dengar musik lagi?"
+  ]
+}
