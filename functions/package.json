@@ -1,0 +1,26 @@
+{
+  "name": "moji-functions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "engines": { "node": "24" },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "start": "functions-framework --target=api",
+    "invites": "node --experimental-strip-types ../scripts/invites.ts"
+  },
+  "dependencies": {
+    "@google-cloud/firestore": "^9.4.0",
+    "@google-cloud/functions-framework": "^5.0.5",
+    "@google/genai": "^2.32.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}
