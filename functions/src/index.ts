@@ -1,7 +1,7 @@
 import * as functions from '@google-cloud/functions-framework';
 import { loadConfig } from './config.js';
 import { createVertexGeminiClient } from './ai/gemini.js';
-import { FirestoreInviteStore } from './invites/firestoreStore.js';
+import { createInviteStore } from './invites/createStore.js';
 import { createLogger } from './log.js';
 import { handleRequest, type Deps } from './router.js';
 
@@ -11,7 +11,7 @@ function getDeps(): Deps {
   if (!deps) {
     const cfg = loadConfig(process.env);
     deps = {
-      store: new FirestoreInviteStore(),
+      store: createInviteStore(process.env),
       gemini: createVertexGeminiClient(cfg),
       cfg,
       logger: createLogger(),

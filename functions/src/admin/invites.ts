@@ -1,6 +1,6 @@
 import { randomInt } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { FirestoreInviteStore } from '../invites/firestoreStore.js';
+import { createInviteStore } from '../invites/createStore.js';
 import { normalizeInviteCode } from '../invites/normalize.js';
 import type { InviteStore } from '../invites/store.js';
 
@@ -86,7 +86,7 @@ export async function runCli(
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runCli(process.argv.slice(2), new FirestoreInviteStore(), (s) => console.log(s)).then(
+  runCli(process.argv.slice(2), createInviteStore(process.env), (s) => console.log(s)).then(
     (code) => process.exit(code),
     (e: unknown) => {
       console.error(e instanceof Error ? e.message : 'failed');
