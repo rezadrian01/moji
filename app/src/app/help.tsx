@@ -1,13 +1,23 @@
-import { Screen } from '@/ui/Screen';
-import { Text } from '@/ui/Text';
+import { router } from 'expo-router';
+import Animated from 'react-native-reanimated';
 
-// Placeholder: diganti oleh Task 19 (halaman bantuan).
+import { SupportContent } from '@/features/safety/SupportSheet';
+import { useCalmMotion } from '@/ui/motion';
+import { Screen } from '@/ui/Screen';
+
+/** Halaman "Butuh bantuan?": selalu bisa dibuka, selalu dalam bentuk lengkap. */
 export default function HelpScreen() {
+  const { enter } = useCalmMotion();
   return (
-    <Screen>
-      <Text variant="title" accessibilityRole="header">
-        Butuh bantuan?
-      </Text>
+    <Screen scroll>
+      <Animated.View entering={enter}>
+        <SupportContent
+          level="urgent"
+          title="Butuh bantuan?"
+          titleVariant="title"
+          onAddContact={() => router.push('/settings/contacts')}
+        />
+      </Animated.View>
     </Screen>
   );
 }
