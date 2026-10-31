@@ -101,6 +101,17 @@ MOOD → CONTEXT → PATTERN → INSIGHT → REFLECTION
 
 **Aplikasi harus berfungsi penuh tanpa AI [Usulan desainer].** Kalau fitur AI dimatikan, belum ada kode undangan, atau sedang offline, ini yang tetap berjalan: mencatat, timeline, pola deskriptif dalam bentuk kalimat templat lokal, pertanyaan reflektif dari bank pertanyaan lokal, dan safety check lokal. Fitur yang hilang hanya kalimat insight versi Gemini, kategorisasi otomatis, dan deteksi tanda bahaya berbasis AI.
 
+### Perubahan 31 Okt 2026: mode demo lokal [Keputusan tim]
+
+Setelah MVP selesai, tim memutuskan demo berjalan lokal:
+
+- Demo memakai HP Android lewat USB atau emulator Android Studio. Aplikasi memanggil `http://localhost:8080` lewat `adb reverse tcp:8080 tcp:8080`.
+- Backend berjalan di laptop (`npm run dev:server`), tanpa Cloud Run.
+- Gemini tetap lewat Vertex AI, diautentikasi dengan ADC milik akun gcloud developer.
+- Kode undangan dan hitungan pemakaian disimpan di file JSON lokal (`MOJI_STORE=file`, bawaan), bukan Firestore. Jalur Firestore (`MOJI_STORE=firestore`) tetap ada.
+- Build Android mengizinkan HTTP cleartext (`expo-build-properties`) agar APK preview bisa memanggil `http://localhost`.
+- **Uji di rumah responden membutuhkan server yang online** (Cloud Run + Firestore), karena server laptop hanya terjangkau lewat USB/emulator.
+
 ### Pilihan teknis
 | Bagian | Pilihan | Status |
 |---|---|---|

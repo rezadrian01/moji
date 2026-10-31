@@ -1,6 +1,6 @@
 # Panduan Setup MOJI
 
-Panduan ini berurutan dari nol sampai APK siap dibagikan ke responden. Langkah 1–4 cukup untuk mencoba aplikasi di HP **tanpa AI**. Langkah 5–9 menyalakan AI (Gemini lewat GCP). Langkah 10–12 untuk membuat APK, mengirim update, dan rilis.
+Panduan ini berurutan dari nol sampai APK siap dibagikan ke responden. Langkah 1–4 cukup untuk mencoba aplikasi di HP **tanpa AI**. Mode demo lokal (di bawah) menyalakan AI lewat server di laptop. Langkah 5–9 menyalakan AI lewat GCP. Langkah 10–12 untuk membuat APK, mengirim update, dan rilis.
 
 ## Gambaran komponen
 
@@ -22,6 +22,73 @@ GCP
 | `contract/fixtures/` | Contoh request/response API, dipakai test kedua sisi |
 | `docs/release-checklist.md` | Checklist wajib sebelum APK dibagikan |
 | `docs/safety-phrases.md` | Daftar frasa safety check lokal dan sumbernya |
+
+---
+
+## Mode demo lokal (dipakai untuk demo)
+
+Keputusan tim 31 Okt 2026: demo memakai HP Android lewat USB atau emulator, backend berjalan di laptop, AI tetap Gemini lewat Vertex AI, dan kode undangan disimpan di file lokal. Tidak ada Cloud Run dan tidak ada Firestore.
+
+```
+HP Android / emulator
+      │  http://localhost:8080  (lewat adb reverse)
+      ▼
+Laptop: functions/ (npm run dev:server)
+├─ data/invites.json   kode undangan + hitungan pemakaian
+└─ Vertex AI (Gemini)  dengan kredensial ADC akun gcloud kamu
+```
+
+**Prasyarat:** Android Studio dengan emulator, **atau** HP Android dengan USB debugging aktif; `adb` ada di PATH (`adb devices` menampilkan perangkatmu); `gcloud` terpasang; langkah 1 dan 2 di bawah sudah dikerjakan.
+
+1. **Login ADC** (sekali, ulangi kalau kredensial kedaluwarsa):
+
+   ```bash
+   gcloud auth application-default login
+   gcloud auth application-default set-quota-project <PROJECT_ID>
+   ```
+
+   Pastikan Vertex AI API aktif di project itu (langkah 5.2).
+
+2. **Isi `.env` backend.** Salin `functions/.env.example` menjadi `functions/.env`, lalu isi `GOOGLE_CLOUD_PROJECT` dengan project ID kamu dan `MOJI_MODEL` dengan nama model Gemini (langkah 5.5). Sisanya boleh dibiarkan. `.env` dan `data/` sudah di-ignore git.
+
+3. **Buat kode undangan** (tersimpan di `functions/data/invites.json`):
+
+   ```bash
+   cd functions
+   npm run invites -- create 10 --prefix R
+   ```
+
+4. **Jalankan server** (build lalu dengarkan di `localhost:8080`; biarkan terminal ini terbuka):
+
+   ```bash
+   npm run dev:server
+   ```
+
+5. **Sambungkan HP atau emulator ke server laptop.** Ulangi setiap HP dicabut-pasang atau emulator di-restart:
+
+   ```bash
+   adb reverse tcp:8080 tcp:8080
+   ```
+
+6. **Arahkan app ke server.** Isi `app/.env.local`:
+
+   ```
+   EXPO_PUBLIC_API_URL=http://localhost:8080
+   ```
+
+7. **Jalankan app** dengan salah satu cara: Expo Go (`cd app && npx expo start`), development build (`npx expo run:android`), atau instal APK preview. APK preview membawa izin HTTP cleartext (`expo-build-properties`), jadi bisa memanggil `http://localhost`. Karena `EXPO_PUBLIC_*` dibaca saat build, untuk APK preview isi `EXPO_PUBLIC_API_URL=http://localhost:8080` di environment EAS `preview` sebelum build.
+
+8. **Cek backend** dari laptop. Harusnya `{"valid":true}`:
+
+   ```bash
+   curl -H "X-Moji-Invite: MOJI-R01-XXXX" http://localhost:8080/health
+   ```
+
+Di aplikasi buka **Pengaturan → Bantuan AI**, pilih **Aktifkan**, lalu masukkan salah satu kode. Perintah `npm run invites -- list` dan `revoke <kode>` bekerja sama seperti biasa terhadap file itu.
+
+Catatan: uji di rumah responden membutuhkan server yang online, yaitu Cloud Run di bagian berikutnya. Server laptop hanya terjangkau lewat USB/emulator.
+
+Untuk memakai Firestore lagi (misalnya di Cloud Run), set `MOJI_STORE=firestore`. Nilai bawaannya `file`.
 
 ---
 
@@ -82,7 +149,11 @@ Semuanya harus hijau sebelum commit. Aturan kerja (TDD, agent paralel) ada di `C
 
 ---
 
-## 5. Setup GCP (sekali saja)
+## 5. Opsional: deploy ke Cloud Run (kalau nanti ada uji di rumah)
+
+Bagian 5–7 hanya perlu kalau backend harus online. Untuk demo lokal lewati sampai langkah 8.
+
+### 5.0 Setup GCP (sekali saja)
 
 Ganti `<PROJECT_ID>` dengan ID project GCP kalian.
 
@@ -215,15 +286,7 @@ EXPO_PUBLIC_DEV_TOOLS=1
 
 Setelah itu di aplikasi buka **Pengaturan → Bantuan AI** (atau onboarding langkah 3), pilih **Aktifkan**, lalu masukkan kode undangan.
 
-**Menjalankan backend lokal (opsional):**
-
-```bash
-cd functions
-export GOOGLE_CLOUD_PROJECT=<PROJECT_ID> MOJI_MODEL=<NAMA_MODEL>
-npm run build && npm start      # http://localhost:8080
-```
-
-HP tidak bisa membuka `localhost` laptop. Isi `EXPO_PUBLIC_API_URL=http://<IP-LAN-laptop>:8080`.
+**Menjalankan backend lokal:** lihat bagian "Mode demo lokal" di atas (`npm run dev:server` dan `adb reverse`).
 
 `EXPO_PUBLIC_*` ikut masuk ke dalam APK, jadi isinya bukan rahasia. Memang tidak ada rahasia apa pun di app.
 
@@ -302,6 +365,8 @@ Ikuti **`docs/release-checklist.md`** sampai semua butir tercentang. Yang paling
 | "Kodenya belum cocok" | Kode salah ketik atau belum dibuat. Cek dengan `npm run invites -- list`. |
 | "Kode undanganmu sudah tidak aktif" | Kode dicabut (`revoke`). Buat kode baru untuk responden itu. |
 | Fitur AI berhenti di siang/sore hari | Batas harian tercapai (`MOJI_PER_CODE_LIMIT` / `MOJI_GLOBAL_LIMIT`). Aplikasi otomatis kembali ke mode lokal. Hitungan reset pukul 00:00 WIB. |
+| HP atau emulator tidak bisa konek ke server | Jalankan ulang `adb reverse tcp:8080 tcp:8080` (hilang saat HP dicabut-pasang atau emulator di-restart), pastikan `npm run dev:server` masih jalan, lalu cek `curl http://localhost:8080/health` dari laptop. |
+| Error kredensial Vertex (500, atau server melaporkan kredensial tidak ditemukan) | Ulangi `gcloud auth application-default login` dan `gcloud auth application-default set-quota-project <PROJECT_ID>`, lalu pastikan `GOOGLE_CLOUD_PROJECT` dan `MOJI_MODEL` di `functions/.env` terisi. |
 | Deploy gagal saat build | Pastikan `typescript` dan `@types/node` masih ada di `devDependencies` `functions/`, dan `.gcloudignore` tidak mengecualikan `src/`. |
 | Notifikasi tidak muncul di Expo Go | Pakai development build (langkah 10.4) dan pastikan izin notifikasi di HP aktif. |
 | Update OTA tidak diterima | `version` di `app.json` build berbeda dengan update, atau channel bukan `preview`. |

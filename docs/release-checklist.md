@@ -2,6 +2,22 @@
 
 Centang setiap butir sebelum membagikan APK. Semua langkah di bawah dikerjakan manusia; tidak ada yang otomatis.
 
+## Checklist demo lokal
+
+Untuk demo di laptop (HP lewat USB atau emulator). Detail langkah ada di `docs/SETUP.md`, bagian "Mode demo lokal".
+
+- [ ] `functions/.env` terisi (`GOOGLE_CLOUD_PROJECT`, `MOJI_MODEL`).
+- [ ] ADC aktif: `gcloud auth application-default login` dan `set-quota-project <PROJECT_ID>`.
+- [ ] Evaluasi prompt lolos: `npm run eval` di `functions/`.
+- [ ] Kode undangan dibuat: `npm run invites -- create 10 --prefix R`.
+- [ ] `npm run dev:server` berjalan.
+- [ ] `adb reverse tcp:8080 tcp:8080` sudah dijalankan (ulangi setelah HP dicabut-pasang atau emulator di-restart).
+- [ ] `curl -H "X-Moji-Invite: <kode>" http://localhost:8080/health` menjawab `{"valid":true}`.
+
+---
+
+Checklist di bawah untuk rilis APK ke responden.
+
 ## 1. Verifikasi konten keselamatan
 
 - [ ] **Nomor layanan nasional di `app/src/features/safety/helpContacts.ts`** (spec §6.9). Cek tiap nomor (SEJIWA `119,8`, Darurat `112`, dan lainnya) ke sumber resmi. Ubah `verified: true`, lalu tulis tanggal verifikasi dan sumbernya di komentar file itu.
