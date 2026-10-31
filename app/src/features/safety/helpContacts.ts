@@ -9,11 +9,12 @@ export interface NationalService {
   verified: boolean;
 }
 
+// Urutan = prioritas: layanan pertama jadi tombol primer pada tingkat urgent.
 // TODO(rilis): tim wajib memverifikasi kedua nomor ini sebelum rilis ke responden, lalu
 // ubah verified menjadi true dan catat tanggal serta sumber verifikasinya di sini.
 export const NATIONAL_SERVICES: NationalService[] = [
   { name: 'SEJIWA', description: 'Layanan dukungan kesehatan jiwa', phone: '119,8', verified: false },
-  { name: 'Darurat', description: 'Kalau kamu dalam bahaya sekarang', phone: '112', verified: false },
+  { name: 'Darurat', description: 'Kalau kamu butuh bantuan segera', phone: '112', verified: false },
 ];
 
 export interface ContactLinks {

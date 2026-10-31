@@ -4,7 +4,7 @@ describe('NATIONAL_SERVICES', () => {
   it('lists SEJIWA and 112, both still awaiting verification by the team', () => {
     expect(NATIONAL_SERVICES).toEqual([
       { name: 'SEJIWA', description: 'Layanan dukungan kesehatan jiwa', phone: '119,8', verified: false },
-      { name: 'Darurat', description: 'Kalau kamu dalam bahaya sekarang', phone: '112', verified: false },
+      { name: 'Darurat', description: 'Kalau kamu butuh bantuan segera', phone: '112', verified: false },
     ]);
   });
 });

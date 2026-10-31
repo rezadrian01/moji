@@ -1,4 +1,5 @@
 import * as Linking from 'expo-linking';
+import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { getSettings } from '@/db/settingsRepo';
@@ -17,13 +18,24 @@ const SHEET_TITLE = 'Kedengarannya ini berat banget.';
 const BODY =
   'Kamu nggak harus menghadapinya sendirian. Kalau mau, kamu bisa menghubungi salah satu di bawah ini.';
 const CLOSE_LABEL = 'Aku baik-baik saja sekarang';
+const DISCLAIMER = 'MOJI bukan layanan darurat.';
+const CALL_FAILED = 'Belum bisa membuka teleponnya. Nomornya ada di atas, ya.';
+const NATIONAL_HEADING = 'Layanan nasional';
+const PERSONAL_HEADING = 'Orang terpercayamu';
+const CAMPUS_HEADING = 'Konseling kampus';
 
-function openLink(url: string): void {
-  // Kalau perangkat tidak bisa membuka tautan, nomornya tetap terlihat untuk dihubungi manual.
-  Linking.openURL(url).catch(() => {});
-}
+/** Buka tautan; `section` = judul bagian tempat tombolnya, dipakai untuk pesan gagal. */
+type OpenLink = (url: string, section: string) => void;
 
-function Section({ heading, children }: { heading: string; children: React.ReactNode }) {
+function Section({
+  heading,
+  callFailed = false,
+  children,
+}: {
+  heading: string;
+  callFailed?: boolean;
+  children: React.ReactNode;
+}) {
   const theme = useTheme();
   return (
     <View style={{ gap: theme.space(2) }}>
@@ -31,6 +43,7 @@ function Section({ heading, children }: { heading: string; children: React.React
         {heading}
       </Text>
       {children}
+      {callFailed ? <Text accessibilityLiveRegion="polite">{CALL_FAILED}</Text> : null}
     </View>
   );
 }
@@ -40,48 +53,69 @@ function ContactActions({
   contact,
   fallbackName,
   primary,
+  openLink,
+  callFailed,
 }: {
   heading: string;
   contact: Contact;
   fallbackName: string;
   primary: boolean;
+  openLink: OpenLink;
+  callFailed: boolean;
 }) {
   const links = contactLinks(contact);
   const shownName = contact.name.trim();
   const name = shownName || fallbackName;
   return (
-    <Section heading={heading}>
+    <Section heading={heading} callFailed={callFailed}>
       {shownName ? <Text>{shownName}</Text> : null}
       {contact.phone?.trim() ? <Text muted>{contact.phone.trim()}</Text> : null}
       {links.call ? (
         <Button
           label={`Telepon ${name}`}
           variant={primary ? 'primary' : 'secondary'}
-          onPress={() => openLink(links.call!)}
+          onPress={() => openLink(links.call!, heading)}
         />
       ) : null}
       {links.whatsapp ? (
-        <Button label={`WhatsApp ${name}`} variant="secondary" onPress={() => openLink(links.whatsapp!)} />
+        <Button
+          label={`WhatsApp ${name}`}
+          variant="secondary"
+          onPress={() => openLink(links.whatsapp!, heading)}
+        />
       ) : null}
       {links.web ? (
-        <Button label={`Buka situs ${name}`} variant="secondary" onPress={() => openLink(links.web!)} />
+        <Button label={`Buka situs ${name}`} variant="secondary" onPress={() => openLink(links.web!, heading)} />
       ) : null}
     </Section>
   );
 }
 
-function NationalServices({ prominent }: { prominent: boolean }) {
+
+function NationalServices({
+  prominent,
+  openLink,
+  callFailed,
+}: {
+  prominent: boolean;
+  openLink: OpenLink;
+  callFailed: boolean;
+}) {
   const theme = useTheme();
   const anyUnverified = NATIONAL_SERVICES.some((s) => !s.verified);
   return (
-    <Section heading="Layanan nasional">
-      {NATIONAL_SERVICES.map((s) => {
+    <Section heading={NATIONAL_HEADING} callFailed={callFailed}>
+      {NATIONAL_SERVICES.map((s, i) => {
         const number = displayPhone(s.phone);
         const call = contactLinks({ phone: s.phone }).call;
         if (!call) return null;
         return prominent ? (
           <View key={s.name} style={{ gap: theme.space(1) }}>
-            <Button label={`Telepon ${s.name} (${number})`} onPress={() => openLink(call)} />
+            <Button
+              label={`Telepon ${s.name} (${number})`}
+              variant={i === 0 ? 'primary' : 'secondary'}
+              onPress={() => openLink(call, NATIONAL_HEADING)}
+            />
             <Text variant="caption" muted>
               {s.description}
             </Text>
@@ -91,7 +125,7 @@ function NationalServices({ prominent }: { prominent: boolean }) {
             key={s.name}
             accessibilityRole="link"
             accessibilityLabel={`Telepon ${s.name}, ${number}`}
-            onPress={() => openLink(call)}
+            onPress={() => openLink(call, NATIONAL_HEADING)}
             style={{ minHeight: 48, justifyContent: 'center' }}
           >
             <Text style={{ color: theme.color.primary, textDecorationLine: 'underline' }}>
@@ -115,19 +149,31 @@ function NationalServices({ prominent }: { prominent: boolean }) {
 /**
  * Isi jaring pengaman: kontak pribadi, konseling kampus, layanan nasional.
  * `urgent` menonjolkan layanan nasional sebagai tombol besar; `concern` menaruhnya paling bawah sebagai tautan.
+ * `showDisclaimer={false}` dipakai sheet, yang menaruh kalimat itu sendiri di atas tombol tutup.
  */
 export function SupportContent({
   level,
   title,
   titleVariant = 'heading',
   onAddContact,
+  showDisclaimer = true,
 }: {
   level: SupportLevel;
   title: string;
   titleVariant?: 'title' | 'heading';
   onAddContact: () => void;
+  showDisclaimer?: boolean;
 }) {
   const theme = useTheme();
+  const [failedSection, setFailedSection] = useState<string | null>(null);
+  const openLink: OpenLink = (url, section) => {
+    setFailedSection(null);
+    // Kalau perangkat tidak bisa menelepon, pesan lembut muncul di bagian itu; nomornya tetap terlihat.
+    Linking.openURL(url).catch(() => {
+      if (url.startsWith('tel:')) setFailedSection(section);
+    });
+  };
+  const failed = (section: string) => failedSection === section;
   const { data: settings } = useDbQuery(getSettings, ['settings'], []);
   const loaded = settings !== undefined;
   const personal = hasReachableContact(settings?.personalContact) ? settings.personalContact : null;
@@ -136,10 +182,12 @@ export function SupportContent({
   const personalBlock = personal ? (
     <ContactActions
       key="personal"
-      heading="Orang terpercayamu"
+      heading={PERSONAL_HEADING}
       contact={personal}
       fallbackName="orang terpercayamu"
       primary
+      openLink={openLink}
+      callFailed={failed(PERSONAL_HEADING)}
     />
   ) : null;
 
@@ -152,17 +200,26 @@ export function SupportContent({
     <View key="campus" style={{ gap: theme.space(2) }}>
       {campus ? (
         <ContactActions
-          heading="Konseling kampus"
+          heading={CAMPUS_HEADING}
           contact={campus}
           fallbackName="konseling kampus"
           primary={false}
+          openLink={openLink}
+          callFailed={failed(CAMPUS_HEADING)}
         />
       ) : null}
       {loaded && addLabel ? <Button label={addLabel} variant="quiet" onPress={onAddContact} /> : null}
     </View>
   );
 
-  const national = <NationalServices key="national" prominent={level === 'urgent'} />;
+  const national = (
+    <NationalServices
+      key="national"
+      prominent={level === 'urgent'}
+      openLink={openLink}
+      callFailed={failed(NATIONAL_HEADING)}
+    />
+  );
   const ordered =
     level === 'urgent' ? [personalBlock, national, campusBlock] : [personalBlock, campusBlock, national];
 
@@ -175,9 +232,7 @@ export function SupportContent({
         <Text>{BODY}</Text>
       </View>
       {ordered}
-      <Text variant="caption" muted>
-        MOJI bukan layanan darurat.
-      </Text>
+      {showDisclaimer ? <Text>{DISCLAIMER}</Text> : null}
     </View>
   );
 }
@@ -197,10 +252,17 @@ export function SupportSheet({
   const theme = useTheme();
   return (
     <Sheet visible={visible} onClose={onClose} accessibilityLabel="Bantuan untukmu" hideCloseButton>
-      <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: theme.space(4) }}>
-        <SupportContent level={level} title={SHEET_TITLE} onAddContact={onAddContact} />
+      <ScrollView
+        testID="support-scroll"
+        style={{ flexShrink: 1 }}
+        contentContainerStyle={{ paddingBottom: theme.space(4) }}
+      >
+        <SupportContent level={level} title={SHEET_TITLE} onAddContact={onAddContact} showDisclaimer={false} />
       </ScrollView>
-      <Button label={CLOSE_LABEL} variant="secondary" onPress={onClose} />
+      <View style={{ gap: theme.space(3) }}>
+        <Text>{DISCLAIMER}</Text>
+        <Button label={CLOSE_LABEL} variant="secondary" onPress={onClose} />
+      </View>
     </Sheet>
   );
 }
