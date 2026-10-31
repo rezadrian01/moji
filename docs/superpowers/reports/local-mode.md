@@ -26,3 +26,6 @@ Store file tidak melakukan logging sama sekali; test log yang ada tetap lulus. K
 - Panggilan Vertex sungguhan (ADC) tidak diuji di sini; smoke hanya `/health`.
 - `EXPO_PUBLIC_API_URL` dibaca saat build, jadi APK preview perlu env EAS `preview` berisi `http://localhost:8080` (dicatat di SETUP).
 - `npm ci` di app memberi peringatan install-scripts (unrs-resolver), bukan kegagalan.
+
+## Follow-up: build lokal tanpa EAS
+Hanya dokumen. SETUP.md "Mode demo lokal" langkah 7 sekarang `npx expo run:android --variant release` (prasyarat ANDROID_HOME/JAVA_HOME, lokasi APK, `adb install -r`, catatan debug keystore, `app/android` generated). Bagian 10-11 dipindah di bawah judul "Opsional: build lewat EAS" (isi tetap). Checklist demo lokal memuat perintah build lokal. Tidak ada perubahan kode; test tidak dijalankan ulang.

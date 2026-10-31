@@ -76,7 +76,25 @@ Laptop: functions/ (npm run dev:server)
    EXPO_PUBLIC_API_URL=http://localhost:8080
    ```
 
-7. **Jalankan app** dengan salah satu cara: Expo Go (`cd app && npx expo start`), development build (`npx expo run:android`), atau instal APK preview. APK preview membawa izin HTTP cleartext (`expo-build-properties`), jadi bisa memanggil `http://localhost`. Karena `EXPO_PUBLIC_*` dibaca saat build, untuk APK preview isi `EXPO_PUBLIC_API_URL=http://localhost:8080` di environment EAS `preview` sebelum build.
+7. **Build dan pasang app secara lokal** (tanpa EAS), dengan SDK Android dari Android Studio.
+
+   Prasyarat build: `ANDROID_HOME` terisi (biasanya `~/Android/Sdk`), dan Java dari Android Studio (JBR). Kalau Gradle menolak versi JDK, arahkan `JAVA_HOME` ke JDK 17 atau 21.
+
+   Nyalakan emulator `Medium_Phone_API_37.0`, atau colok HP dengan USB debugging (`adb devices` harus menampilkannya), lalu:
+
+   ```bash
+   cd app
+   npx expo run:android --variant release
+   ```
+
+   - `EXPO_PUBLIC_API_URL` dibaca dari `app/.env.local` **saat build**, jadi isi `EXPO_PUBLIC_API_URL=http://localhost:8080` sebelum build.
+   - `EXPO_PUBLIC_DEV_TOOLS=1` hanya untuk build tim. Untuk build responden isi `0` atau hapus barisnya.
+   - Build release membawa izin HTTP cleartext (`expo-build-properties`), jadi bisa memanggil `http://localhost`.
+   - APK hasil build ada di `app/android/app/build/outputs/apk/release/`. Pasang ke HP lain dengan `adb install -r <file.apk>`.
+   - `app/android/` dihasilkan otomatis dan di-ignore git. Jangan diedit manual; `npx expo prebuild --clean` membuatnya ulang.
+   - APK release lokal ditandatangani dengan debug keystore bawaan template Expo. Cukup untuk demo. Kalau ingin memperbarui di tempat tanpa kehilangan data, pakai mesin (keystore) yang sama.
+
+   Untuk pengembangan harian bisa juga lewat Expo Go: `cd app && npx expo start`.
 
 8. **Cek backend** dari laptop. Harusnya `{"valid":true}`:
 
@@ -98,7 +116,7 @@ Untuk memakai Firestore lagi (misalnya di Cloud Run), set `MOJI_STORE=firestore`
 - Node.js **24** atau lebih baru, beserta npm.
 - Git.
 - [Google Cloud CLI (`gcloud`)](https://cloud.google.com/sdk/docs/install), untuk langkah 5 ke atas.
-- EAS CLI, untuk langkah 10 ke atas. Tidak perlu diinstal global; jalankan lewat `npx eas-cli@latest <perintah>`.
+- (Opsional) EAS CLI, hanya untuk build lewat EAS (langkah 10 ke atas). Tidak perlu diinstal global; jalankan lewat `npx eas-cli@latest <perintah>`.
 
 **HP dan akun:**
 - HP Android dengan aplikasi **Expo Go** dari Play Store, atau emulator Android.
@@ -292,7 +310,11 @@ Setelah itu di aplikasi buka **Pengaturan → Bantuan AI** (atau onboarding lang
 
 ---
 
-## 10. Build APK dengan EAS
+## Opsional: build lewat EAS
+
+Bagian 10–11 hanya dipakai kalau APK dibangun di cloud EAS, bukan lokal.
+
+### 10. Build APK dengan EAS
 
 Jalankan semua perintah dari folder `app/`.
 

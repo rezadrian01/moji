@@ -12,6 +12,7 @@ Untuk demo di laptop (HP lewat USB atau emulator). Detail langkah ada di `docs/S
 - [ ] Kode undangan dibuat: `npm run invites -- create 10 --prefix R`.
 - [ ] `npm run dev:server` berjalan.
 - [ ] `adb reverse tcp:8080 tcp:8080` sudah dijalankan (ulangi setelah HP dicabut-pasang atau emulator di-restart).
+- [ ] `app/.env.local` berisi `EXPO_PUBLIC_API_URL=http://localhost:8080` (`EXPO_PUBLIC_DEV_TOOLS=0` untuk build responden), lalu app dibangun dan dipasang: `cd app && npx expo run:android --variant release` (emulator `Medium_Phone_API_37.0` atau HP USB).
 - [ ] `curl -H "X-Moji-Invite: <kode>" http://localhost:8080/health` menjawab `{"valid":true}`.
 
 ---
