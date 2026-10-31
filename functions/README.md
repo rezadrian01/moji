@@ -8,6 +8,7 @@ Satu Cloud Function HTTP (`api`) dengan rute `GET /health`, `POST /analyzeEntry`
 npm test            # vitest
 npm run typecheck
 npm run build       # tsc, tanpa file test
+npm run dev:server  # build + server lokal di :8080, memuat functions/.env (mode demo lokal)
 npm start           # functions-framework lokal (butuh env var + kredensial ADC)
 ```
 
@@ -20,10 +21,15 @@ npm start           # functions-framework lokal (butuh env var + kredensial ADC)
 | `GOOGLE_CLOUD_PROJECT` | ya (diisi otomatis di Cloud Functions) | - | Project GCP |
 | `MOJI_PER_CODE_LIMIT` | tidak | `50` | Batas request per kode per hari (WIB) |
 | `MOJI_GLOBAL_LIMIT` | tidak | `1000` | Batas request semua kode per hari (WIB) |
+| `MOJI_STORE` | tidak | `file` | `file` (JSON lokal, mode demo) atau `firestore` |
+| `MOJI_INVITES_FILE` | tidak | `data/invites.json` | Path file kode undangan (relatif ke cwd) untuk `MOJI_STORE=file` |
+| `PORT` | tidak | `8080` | Port server lokal |
+
+Salin `.env.example` ke `.env` untuk dev lokal; skrip `dev:server`, `invites`, dan `eval` memuatnya lewat `node --env-file-if-exists=.env`.
 
 Tidak ada rahasia di repo. Kredensial berasal dari service account function.
 
-## Firestore
+## Firestore (hanya kalau `MOJI_STORE=firestore`)
 
 Buat database Firestore mode **Native** di project yang sama:
 
