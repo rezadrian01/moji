@@ -40,6 +40,11 @@ export function Chip({
       <Text variant="body" style={selected ? { fontFamily: theme.font.semibold } : undefined}>
         {label}
       </Text>
+      {dashed ? (
+        <Text variant="caption" muted>
+          disarankan
+        </Text>
+      ) : null}
     </Pressable>
   );
 }

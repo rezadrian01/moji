@@ -19,6 +19,15 @@ jest.mock('expo-notifications', () => ({
   getPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
   setNotificationHandler: jest.fn(),
   AndroidImportance: { DEFAULT: 3 },
+  SchedulableTriggerInputTypes: {
+    CALENDAR: 'calendar',
+    DAILY: 'daily',
+    WEEKLY: 'weekly',
+    MONTHLY: 'monthly',
+    YEARLY: 'yearly',
+    DATE: 'date',
+    TIME_INTERVAL: 'timeInterval',
+  },
 }));
 
 jest.mock('expo-sharing', () => ({
@@ -34,4 +43,15 @@ jest.mock('expo-file-system', () => ({
   deleteAsync: jest.fn(async () => undefined),
 }));
 
+jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
+
+// The native initializer calls into a JS-only ReanimatedModule that throws under Jest.
+jest.mock('react-native-reanimated/src/initializers.native', () => ({
+  initializeReanimatedModule: () => undefined,
+}));
+
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+
+jest.mock('expo-crypto', () => ({
+  randomUUID: () => globalThis.crypto.randomUUID(),
+}));

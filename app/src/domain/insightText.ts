@@ -4,29 +4,40 @@ export const NOT_ENOUGH_DATA_TEXT =
   'MOJI masih mengenal polamu. Coba cek lagi setelah beberapa catatan lagi, ya.';
 
 export const FORBIDDEN_WORDS =
-  /depresi|gangguan|diagnos|bipolar|anxiety disorder|skizo|penyakit mental|kamu mengalami kecemasan/i;
+  /depresi|gangguan|diagnos|bipolar|skizo|trauma|klinis|penyakit mental|kecemasan|anxiety|psikosis|ptsd|ocd|adhd|patologis|psikiat|mengidap|menderita|gejala|sakit jiwa|kelainan jiwa/i;
+
+export const PRESSURE_WORDS =
+  /kamu\s+(harus|perlu|wajib)|seharusnya|sebaiknya|jangan\s+lupa|streak|hari bolong|tidak mencatat|belum mencatat|terlewat/i;
 
 const REJECTED_PREFIX =
-  'Kamu pernah bilang pola ini kurang sesuai, tapi catatanmu masih menunjukkannya. ';
+  'Sebelumnya kamu merasa pola ini kurang pas. Kalau menurutmu masih begitu, tidak apa-apa. Ini yang MOJI lihat sekarang: ';
+
+const mid = (label: string) => label.toLowerCase();
+const start = (label: string) => {
+  const l = mid(label);
+  return l.charAt(0).toUpperCase() + l.slice(1);
+};
 
 const PATTERN_TEMPLATES: Record<PatternKind, (p: Pattern) => string> = {
-  low_mood_context: (p) =>
-    `Dari ${p.count} catatan yang menyebut ${p.subjectLabel}, ${p.hitCount} di antaranya mood-mu sedang rendah. Sepertinya ${p.subjectLabel} cukup berpengaruh ke perasaanmu, apakah ini sesuai dengan yang kamu alami?`,
+  low_mood_context: (p) => {
+    const l = mid(p.subjectLabel);
+    return `Dari ${p.count} catatan yang menyebut ${l}, ${p.hitCount} di antaranya mood-mu sedang rendah. Mungkin ${l} ikut berperan di sini, tapi kamu yang paling tahu. Apakah ini terasa sesuai?`;
+  },
   low_mood_experience: (p) =>
-    `Saat mood-mu rendah, kamu cukup sering mencatat ${p.subjectLabel} (${p.hitCount} kali). Mungkin keduanya saling berkaitan, bagaimana menurutmu?`,
+    `Di catatan saat mood-mu rendah, ${mid(p.subjectLabel)} beberapa kali muncul (${p.hitCount} kali). Mungkin keduanya berkaitan. Bagaimana menurutmu?`,
   helpful_coping: (p) =>
-    `${p.subjectLabel} kamu tandai membantu ${p.hitCount} dari ${p.count} kali. Sepertinya ini salah satu hal yang cocok buatmu.`,
+    `${start(p.subjectLabel)} kamu tandai membantu ${p.hitCount} dari ${p.count} kali. Mungkin ini salah satu hal yang cocok buatmu, walau tidak harus selalu berhasil.`,
 };
 
 const KIND_QUESTIONS: [PatternKind, (label: string) => string][] = [
-  ['low_mood_context', (l) => `Apa yang biasanya terjadi saat ${l} terasa berat?`],
-  ['low_mood_experience', (l) => `Apa yang biasanya kamu butuhkan saat merasa ${l}?`],
-  ['helpful_coping', (l) => `Kapan terakhir kali ${l} membantumu?`],
+  ['low_mood_context', (l) => `Apa yang biasanya terjadi saat ${mid(l)} terasa berat?`],
+  ['low_mood_experience', (l) => `Apa yang biasanya kamu butuhkan saat merasa ${mid(l)}?`],
+  ['helpful_coping', (l) => `Kalau kamu mau, ingat-ingat lagi: kapan terakhir ${mid(l)} terasa membantu?`],
 ];
 
 const GENERAL_QUESTIONS = [
   'Dari minggu ini, momen apa yang paling ingin kamu ingat?',
-  'Apa satu hal kecil yang bisa membuat besok sedikit lebih ringan?',
+  'Kalau ada, hal kecil apa yang bisa membuat harimu terasa sedikit lebih ringan?',
 ];
 
 const MAX_QUESTIONS = 3;
@@ -46,7 +57,7 @@ export function localInsightText(summary: PatternSummary): {
   if (summary.patterns.length > 0) {
     text = `Ini beberapa hal yang MOJI perhatikan dari ${summary.entryCount} catatanmu.`;
   } else if (summary.enoughData) {
-    text = `Dari ${summary.entryCount} catatanmu, belum ada pola yang menonjol. Itu juga wajar, kok.`;
+    text = `Dari ${summary.entryCount} catatanmu, belum ada pola yang menonjol, dan itu tidak apa-apa. Catatanmu tetap berarti.`;
   } else {
     text = NOT_ENOUGH_DATA_TEXT;
   }

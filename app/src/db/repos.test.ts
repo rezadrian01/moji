@@ -18,7 +18,6 @@ import { getDraft, getSettings, saveDraft, updateSettings, wipeAll } from './set
 import { createEntry } from './entriesRepo';
 import { onDataChanged } from './events';
 
-jest.mock('expo-crypto', () => ({ randomUUID: () => globalThis.crypto.randomUUID() }));
 
 let db: Db;
 beforeEach(async () => {
