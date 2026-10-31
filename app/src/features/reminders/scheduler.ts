@@ -37,15 +37,19 @@ export async function applyReminderSettings(
   await ensureChannel();
 
   if (s.reminderTime) {
-    const body = DAILY_MESSAGES[Math.floor(Math.random() * DAILY_MESSAGES.length)];
-    await Notifications.scheduleNotificationAsync({
-      content: { title: 'MOJI', body, sound: false },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        ...parseTime(s.reminderTime),
-        channelId: CHANNEL_ID,
-      },
-    });
+    // Pengingat harian = 7 trigger mingguan (satu per hari) supaya teksnya bergilir.
+    const time = parseTime(s.reminderTime);
+    for (let iso = 1; iso <= 7; iso++) {
+      await Notifications.scheduleNotificationAsync({
+        content: { title: 'MOJI', body: DAILY_MESSAGES[(iso - 1) % DAILY_MESSAGES.length], sound: false },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          weekday: isoToExpoWeekday(iso),
+          ...time,
+          channelId: CHANNEL_ID,
+        },
+      });
+    }
   }
 
   if (s.weeklyNudge) {

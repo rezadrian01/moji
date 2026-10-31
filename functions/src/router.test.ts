@@ -110,6 +110,15 @@ describe('POST /analyzeEntry', () => {
     expect((res.body as any).suggestions.copings).toEqual([]);
   });
 
+  it('accepts a long note (up to 20000 chars) and rejects longer ones with 400', async () => {
+    const { deps } = await setup(() => ({ ok: true, data: fixture('analyzeEntry.response') }));
+    const req = fixture('analyzeEntry.request');
+    const ok = await handleRequest(post('/analyzeEntry', { ...req, text: 'a'.repeat(20000) }), deps);
+    expect(ok.status).toBe(200);
+    const tooLong = await handleRequest(post('/analyzeEntry', { ...req, text: 'a'.repeat(20001) }), deps);
+    expect(tooLong).toEqual({ status: 400, body: { error: 'bad_request' } });
+  });
+
   it('invalid body -> 400 bad_request', async () => {
     const { deps } = await setup(() => ({ ok: false, reason: 'error' }));
     const res = await handleRequest(post('/analyzeEntry', { text: '', mood: 9 }), deps);

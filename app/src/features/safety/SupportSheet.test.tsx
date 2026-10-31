@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import * as Linking from 'expo-linking';
 
 import type { Db } from '@/db/db';
@@ -7,6 +7,7 @@ import { createTestDb } from '@/db/testing/sqljsDb';
 import { FORBIDDEN_WORDS, PRESSURE_WORDS } from '@/domain/insightText';
 import type { Contact } from '@/domain/types';
 import { AppProviders } from '@/features/app/AppProviders';
+import { darkTheme, lightTheme } from '@/theme/tokens';
 
 import { SupportSheet } from './SupportSheet';
 
@@ -23,6 +24,7 @@ function allText(): string[] {
 }
 
 const TITLE = 'Kedengarannya ini berat banget.';
+const CALL_FAILED = 'Belum bisa membuka teleponnya. Nomornya ada di atas, ya.';
 const RINA: Contact = { name: 'Rina', phone: '0812-3456-789', url: null };
 const CAMPUS: Contact = { name: 'BK Kampus', phone: '0274-555123', url: 'bk.kampus.ac.id' };
 
@@ -77,6 +79,35 @@ describe('SupportSheet', () => {
     expect(openURL).toHaveBeenCalledWith('tel:119,8');
     await fireEvent.press(screen.getByRole('button', { name: 'Telepon Darurat (112)' }));
     expect(openURL).toHaveBeenCalledWith('tel:112');
+  });
+
+  it('makes SEJIWA the primary button and 112 the secondary one when urgent', async () => {
+    await renderSheet('urgent');
+    expect(screen.getByRole('button', { name: 'Telepon SEJIWA (119 ext 8)' })).toHaveStyle({ borderWidth: 0 });
+    expect(screen.getByRole('button', { name: 'Telepon Darurat (112)' })).toHaveStyle({ borderWidth: 1 });
+  });
+
+  it('describes 112 as help you need right away', async () => {
+    await renderSheet('urgent');
+    expect(screen.getByText('Kalau kamu butuh bantuan segera')).toBeOnTheScreen();
+  });
+
+  it('says gently that the call could not be opened when openURL fails', async () => {
+    openURL.mockRejectedValueOnce(new Error('no dialer'));
+    await renderSheet('urgent');
+    expect(screen.queryByText(CALL_FAILED)).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Telepon SEJIWA (119 ext 8)' }));
+    expect(await screen.findByText(CALL_FAILED)).toBeOnTheScreen();
+  });
+
+  it('shows "MOJI bukan layanan darurat." as normal text outside the scroll, right above the close button', async () => {
+    await renderSheet('concern');
+    const note = screen.getByText('MOJI bukan layanan darurat.');
+    expect(within(screen.getByTestId('support-scroll')).queryByText('MOJI bukan layanan darurat.')).toBeNull();
+    expect(indexOf('Aku baik-baik saja sekarang') - indexOf('MOJI bukan layanan darurat.')).toBe(1);
+    expect(note).toHaveStyle({ fontSize: 16 });
+    expect(note).not.toHaveStyle({ color: lightTheme.color.textMuted });
+    expect(note).not.toHaveStyle({ color: darkTheme.color.textMuted });
   });
 
   it('shows national services as plain links, not buttons, for concern', async () => {

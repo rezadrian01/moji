@@ -1,7 +1,8 @@
 // Kunci SLANG_MAP boleh ditulis apa adanya; safety.ts menormalkan kunci dengan collapse huruf yang sama.
 // Daftar frasa safety check lokal. Dokumentasi: docs/safety-phrases.md.
-// Frasa ditulis dalam bentuk ternormalisasi (lihat normalizeText di safety.ts):
-// huruf kecil, tanpa tanda baca, slang sudah dibakukan ("mau" TIDAK dipetakan).
+// Frasa WAJIB ditulis dalam bentuk ternormalisasi (normalizeText(p) === p, dijaga test):
+// huruf kecil, tanpa tanda baca, huruf kembar sudah di-collapse ("cuting", "sangup"),
+// slang sudah dibakukan ("buat" -> "untuk"; "mau" TIDAK dipetakan).
 
 /** Peta slang per kata (setelah lowercase, hapus tanda baca, dan collapse huruf berulang). */
 export const SLANG_MAP: Readonly<Record<string, string>> = {
@@ -43,6 +44,8 @@ export const SLANG_MAP: Readonly<Record<string, string>> = {
   cape: 'capek',
   cepet: 'cepat',
   ilang: 'hilang',
+  ngilang: 'hilang',
+  buat: 'untuk',
 };
 
 export const URGENT_PHRASES: readonly string[] = [
@@ -86,13 +89,48 @@ export const URGENT_PHRASES: readonly string[] = [
   'nyayat nadi',
   'potong nadi',
   'silet tangan',
-  'cutting',
+  'cuting',
   'terjun dari',
   'loncat dari',
   'minum racun',
   'minum baygon',
   'bunuh dirinya',
   'mengakhiri hidupku',
+  // keinginan untuk tidak ada / tidak pernah lahir
+  'andai aku tidak ada',
+  'seandainya aku tidak ada',
+  'mending aku tidak ada',
+  'lebih baik aku tidak ada',
+  'kalau aku tidak ada pasti lebih baik',
+  'kalau aku tidak ada lebih baik',
+  'lebih baik kalau aku tidak ada',
+  'lebih baik tanpa aku',
+  'tidak pernah lahir',
+  'tidak pernah dilahirkan',
+  // tidak bangun lagi
+  'tidak bangun lagi',
+  'tidak usah bangun lagi',
+  'tidak mau bangun lagi',
+  // tidak ada alasan hidup
+  'tidak ada alasan untuk hidup',
+  'tidak ada alasan hidup',
+  'tidak ada alasan lagi untuk hidup',
+  // akhiri semuanya
+  'akhiri semuanya',
+  'mengakhiri semuanya',
+  'akhirin semuanya',
+  'akhiri semua ini',
+  'mengakhiri semua ini',
+  'ingin semuanya berakhir',
+  'mau semuanya berakhir',
+  'ingin semua berakhir',
+  'mau semua berakhir',
+  // pergi selamanya, surat perpisahan
+  'ingin pergi selamanya',
+  'mau pergi selamanya',
+  'ingin pergi untuk selamanya',
+  'mau pergi untuk selamanya',
+  'surat perpisahan',
 ];
 
 export const CONCERN_PHRASES: readonly string[] = [
@@ -104,13 +142,13 @@ export const CONCERN_PHRASES: readonly string[] = [
   'tidak ada gunanya',
   'aku tidak berguna',
   'jadi beban',
-  'beban buat semua orang',
+  'beban untuk semua orang',
   'ingin menghilang',
   'ingin hilang saja',
   'tidak ada yang peduli',
   'sendirian banget',
   'hancur banget',
-  'tidak sanggup lagi',
+  'tidak sangup lagi',
   'nyerah',
   'menyerah saja',
   'tidak ada gunanya hidup',
@@ -127,4 +165,6 @@ export const CONCERN_PHRASES: readonly string[] = [
   'tidak ada yang sayang',
   'tidak ada yang butuh aku',
   'merepotkan semua orang',
+  'ingin udahan',
+  'mau udahan',
 ];

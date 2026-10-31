@@ -1,4 +1,5 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
+import * as SecureStore from 'expo-secure-store';
 
 import { setInviteCode } from '@/ai/inviteStore';
 import type { Db } from '@/db/db';
@@ -59,5 +60,20 @@ describe('useAiAllowed', () => {
     const result = await renderAiAllowed();
     await updateSettings(db, { aiEnabled: true, aiConsentAt: '2026-10-31T09:00:00.000+07:00' });
     expect(await result.current()).toBe(false);
+  });
+
+  it('is false (does not reject) when SecureStore throws', async () => {
+    const result = await renderAiAllowed();
+    await updateSettings(db, { aiEnabled: true, aiConsentAt: '2026-10-31T09:00:00.000+07:00' });
+    const getItem = jest.mocked(SecureStore.getItemAsync);
+    const original = getItem.getMockImplementation()!;
+    getItem.mockImplementation(async () => {
+      throw new Error('keystore unavailable');
+    });
+    try {
+      await expect(result.current()).resolves.toBe(false);
+    } finally {
+      getItem.mockImplementation(original);
+    }
   });
 });

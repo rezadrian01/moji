@@ -136,6 +136,13 @@ describe('pendingSafetyRepo', () => {
     expect(await takePendingSafety(db)).toEqual({ entryId: 'e1', level: 'urgent' });
     expect(await takePendingSafety(db)).toBeNull();
   });
+
+  it('never downgrades: urgent then concern for the same entry stays urgent', async () => {
+    await addPendingSafety(db, 'e1', 'urgent');
+    await addPendingSafety(db, 'e1', 'concern');
+    expect(await takePendingSafety(db)).toEqual({ entryId: 'e1', level: 'urgent' });
+    expect(await takePendingSafety(db)).toBeNull();
+  });
 });
 
 describe('settingsRepo', () => {

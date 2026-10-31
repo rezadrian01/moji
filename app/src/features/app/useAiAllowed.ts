@@ -7,12 +7,18 @@ import { useDb } from '@/db/useDbQuery';
 /**
  * Mengembalikan fungsi yang memeriksa izin AI. Pengaturan dan kode undangan dibaca ulang
  * setiap kali dipanggil, jadi mematikan AI langsung berlaku untuk request berikutnya.
+ * Tidak pernah reject: kegagalan SecureStore dibaca sebagai "AI tidak diizinkan".
  */
 export function useAiAllowed(): () => Promise<boolean> {
   const db = useDb();
   return useCallback(async () => {
     const settings = await getSettings(db);
     if (!settings.aiEnabled || settings.aiConsentAt === null) return false;
-    return (await getInviteCode()) !== null;
+    try {
+      return (await getInviteCode()) !== null;
+    } catch {
+      // SecureStore bisa gagal (keystore rusak/terkunci): MOJI tetap jalan tanpa AI.
+      return false;
+    }
   }, [db]);
 }

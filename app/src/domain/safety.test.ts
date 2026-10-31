@@ -1,5 +1,6 @@
 import type { Entry, Mood } from './types';
 import { checkLocalSafety, isWorsening, maxRisk, normalizeText, WORSENING_RULE } from './safety';
+import { CONCERN_PHRASES, URGENT_PHRASES } from './safetyPhrases';
 
 describe('normalizeText', () => {
   it('lowercases, strips punctuation/emoji, collapses repeats and maps slang', () => {
@@ -13,6 +14,17 @@ describe('normalizeText', () => {
 
   it('maps first-person slang to aku', () => {
     expect(normalizeText('gw gue Aku')).toBe('aku aku aku');
+  });
+
+  it('maps ngilang to hilang and buat to untuk', () => {
+    expect(normalizeText('pengen ngilang')).toBe('ingin hilang');
+    expect(normalizeText('alasan buat hidup')).toBe('alasan untuk hidup');
+  });
+});
+
+describe('phrase lists', () => {
+  it.each([...URGENT_PHRASES, ...CONCERN_PHRASES])('"%s" is stored in normalized form', (p) => {
+    expect(normalizeText(p)).toBe(p);
   });
 });
 
@@ -70,6 +82,21 @@ describe('checkLocalSafety', () => {
     ['males idup', 'concern'],
     ['tidak ada yang butuh gue', 'concern'],
     ['merepotkan semua orang', 'concern'],
+    // final review: wishing not to exist / not to live / not to wake up
+    ['andai gue ga ada', 'urgent'],
+    ['mending aku ga ada', 'urgent'],
+    ['kalau aku ga ada pasti lebih baik', 'urgent'],
+    ['lebih baik aku tidak pernah lahir', 'urgent'],
+    ['pengen tidur dan ga bangun lagi', 'urgent'],
+    ['gak ada alasan buat hidup', 'urgent'],
+    ['aku mau akhiri semuanya', 'urgent'],
+    ['pengen semuanya berakhir', 'urgent'],
+    ['pengen pergi selamanya', 'urgent'],
+    ['nulis surat perpisahan', 'urgent'],
+    ['pengen udahan', 'concern'],
+    ['pengen ngilang', 'concern'],
+    ['aku ga ada waktu hari ini', 'none'],
+    ['libur semester akhirnya berakhir', 'none'],
     // accepted false positives (conservative, see docs/safety-phrases.md)
     ['mau mati lampu', 'urgent'],
     ['aku tidak mau mati', 'urgent'],

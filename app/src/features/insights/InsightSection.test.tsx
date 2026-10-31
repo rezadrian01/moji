@@ -1,10 +1,12 @@
 /** @jest-environment ./src/domain/jakartaEnvironment.js */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import * as SecureStore from 'expo-secure-store';
 
 import { createEntry } from '@/db/entriesRepo';
 import type { Db } from '@/db/db';
 import { getFeedbackForInsight } from '@/db/feedbackRepo';
 import { getInsight, listInsights, saveInsight } from '@/db/insightsRepo';
+import { updateSettings } from '@/db/settingsRepo';
 import { createTestDb } from '@/db/testing/sqljsDb';
 import { NOT_ENOUGH_DATA_TEXT } from '@/domain/insightText';
 import { AppProviders } from '@/features/app/AppProviders';
@@ -109,6 +111,26 @@ describe('InsightSection', () => {
     await waitFor(async () => expect(await listInsights(db)).toHaveLength(2));
     expect((await listInsights(db))[0].source).toBe('local');
     expect(await screen.findByText(/belum ada pola yang menonjol|MOJI perhatikan/)).toBeTruthy();
+  });
+
+  it('still makes a local insight when AI is on but SecureStore throws', async () => {
+    const now = new Date();
+    for (let i = 0; i < 6; i++) await createEntry(db, { mood: 3, createdAt: now.toISOString() }, now);
+    await updateSettings(db, { aiEnabled: true, aiConsentAt: '2026-10-31T09:00:00.000+07:00' });
+    const getItem = jest.mocked(SecureStore.getItemAsync);
+    const original = getItem.getMockImplementation()!;
+    getItem.mockImplementation(async () => {
+      throw new Error('keystore unavailable');
+    });
+    try {
+      await renderIt();
+      await fireEvent.press(await screen.findByRole('button', { name: 'Lihat polaku' }));
+      await waitFor(async () => expect(await listInsights(db)).toHaveLength(1));
+      expect((await listInsights(db))[0].source).toBe('local');
+      expect(screen.queryByText(/Belum berhasil sekarang/)).toBeNull();
+    } finally {
+      getItem.mockImplementation(original);
+    }
   });
 
   it('lists earlier insights below the latest one', async () => {

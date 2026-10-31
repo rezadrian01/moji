@@ -24,7 +24,7 @@ const SuggestionsSchema = z.object({
 });
 
 export const AnalyzeEntryRequestSchema = z.object({
-  text: z.string().min(1).max(5000),
+  text: z.string().min(1).max(20000),
   mood: MoodSchema,
   options: z.object({
     contexts: OptionsSchema,

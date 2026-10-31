@@ -33,7 +33,7 @@ it('mengubah jam pengingat ke 21:00 menjadwalkan notifikasi jam 21', async () =>
   expect((await getSettings(db)).reminderTime).toBe('21:00');
   expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
     expect.objectContaining({
-      trigger: expect.objectContaining({ type: 'daily', hour: 21, minute: 0 }),
+      trigger: expect.objectContaining({ type: 'weekly', hour: 21, minute: 0 }),
     }),
   );
 });

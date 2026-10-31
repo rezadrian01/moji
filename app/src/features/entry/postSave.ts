@@ -7,6 +7,7 @@ import { addPendingSafety } from '../../db/pendingSafetyRepo';
 import { getSettings, updateSettings } from '../../db/settingsRepo';
 import { checkLocalSafety, isWorsening, maxRisk, WORSENING_RULE } from '../../domain/safety';
 import { CONTEXTS, COPINGS, EXPERIENCES } from '../../domain/taxonomy';
+import { noteInviteProblem } from '../ai/inviteProblem';
 import type { Entry, RiskLevel, Suggestions } from '../../domain/types';
 
 export interface PostSaveDeps {
@@ -31,11 +32,21 @@ const isHigher = (level: RiskLevel, than: RiskLevel) => RANK[level] > RANK[than]
 
 const DAY_MS = 24 * 3_600_000;
 
+/** Sama dengan batas `text` di functions/src/contract.ts (unit UTF-16). */
+export const MAX_ANALYZE_TEXT_LENGTH = 20000;
+
+/** Bagian akhir teks dipertahankan; surrogate yang terpotong separuh di awal dibuang. */
+function keepEnd(text: string): string {
+  if (text.length <= MAX_ANALYZE_TEXT_LENGTH) return text;
+  const cut = text.slice(-MAX_ANALYZE_TEXT_LENGTH);
+  return /^[\uDC00-\uDFFF]/.test(cut) ? cut.slice(1) : cut;
+}
+
 /** null jika catatan tidak punya teks (kosong/whitespace): AI tidak dipanggil. */
 export function buildAnalyzeRequest(entry: Entry): AnalyzeEntryRequest | null {
   const text = entry.note?.trim();
   if (!text) return null;
-  return { text, mood: entry.mood, options: OPTIONS };
+  return { text: keepEnd(text), mood: entry.mood, options: OPTIONS };
 }
 
 /**
@@ -74,7 +85,10 @@ async function runAi(entry: Entry, request: AnalyzeEntryRequest, deps: PostSaveD
   const { db } = deps;
   try {
     const result = await deps.ai.analyzeEntry(request);
-    if (!result.ok) return;
+    if (!result.ok) {
+      await noteInviteProblem(db, result.reason);
+      return;
+    }
 
     const fresh = await getEntry(db, entry.id);
     if (!fresh) return;

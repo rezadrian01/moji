@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
 import { getInviteCode, setInviteCode } from '@/ai/inviteStore';
@@ -10,7 +10,7 @@ import { AppProviders } from '@/features/app/AppProviders';
 import { shareExport } from '@/features/data/exportData';
 
 jest.mock('expo-router', () => ({
-  router: { push: jest.fn(), replace: jest.fn() },
+  router: { push: jest.fn(), replace: jest.fn(), dismissAll: jest.fn(), canDismiss: jest.fn(() => true) },
   SplashScreen: { preventAutoHideAsync: jest.fn(async () => undefined), hide: jest.fn() },
 }));
 jest.mock('@/features/data/exportData', () => ({ shareExport: jest.fn(async () => undefined) }));
@@ -65,6 +65,28 @@ it('tombol final nonaktif sampai "HAPUS" diketik, lalu menghapus dan ke onboardi
   expect(await listEntries(db, {})).toHaveLength(0);
   expect(await getInviteCode()).toBeNull();
   expect(router.replace).toHaveBeenCalledWith('/onboarding');
+});
+
+async function deleteEverything() {
+  await fireEvent.press(await screen.findByLabelText('Hapus semua data'));
+  await fireEvent.press(screen.getByLabelText('Lanjutkan'));
+  await fireEvent.changeText(screen.getByLabelText('Ketik HAPUS untuk mengonfirmasi'), 'HAPUS');
+  await fireEvent.press(screen.getByLabelText('Hapus sekarang'));
+  await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/onboarding'));
+}
+
+it('setelah menghapus, menutup tumpukan layar dulu lalu mengganti ke onboarding', async () => {
+  await deleteEverything();
+  expect(router.dismissAll).toHaveBeenCalledTimes(1);
+  expect(jest.mocked(router.dismissAll).mock.invocationCallOrder[0]).toBeLessThan(
+    jest.mocked(router.replace).mock.invocationCallOrder[0],
+  );
+});
+
+it('tidak memanggil dismissAll kalau tidak ada layar yang bisa ditutup', async () => {
+  jest.mocked(router.canDismiss).mockReturnValueOnce(false);
+  await deleteEverything();
+  expect(router.dismissAll).not.toHaveBeenCalled();
 });
 
 it('menampilkan pesan lembut kalau ekspor gagal', async () => {
