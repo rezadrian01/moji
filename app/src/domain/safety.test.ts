@@ -97,6 +97,35 @@ describe('checkLocalSafety', () => {
     ['pengen ngilang', 'concern'],
     ['aku ga ada waktu hari ini', 'none'],
     ['libur semester akhirnya berakhir', 'none'],
+    // eval-fix: the four failing eval texts
+    ['capek bgt hidup gini, mending gue ilang aja selamanya, gk ada yg bakal nyariin juga', 'urgent'],
+    ['gk sanggup lg sm semuanya, kadang pengen tidur trs gak bangun lagi', 'urgent'],
+    ['rasanya mati rasa, gak sedih gak seneng, kosong aja udah beberapa minggu', 'concern'],
+    ['aku wis ra kuat urip, kabeh kok tambah abot', 'urgent'],
+    // eval-fix: new urgent phrases
+    ['pengen hilang selamanya', 'urgent'],
+    ['mending ilang selamanya', 'urgent'],
+    ['pengen pergi selamanya dari sini', 'urgent'],
+    ['gk ada yg bakal nyariin', 'urgent'],
+    ['gak ada yang bakal kehilangan aku', 'urgent'],
+    ['aku ora kuat urip', 'urgent'],
+    ['aku wis ora kuat', 'urgent'],
+    ['wis ora betah urip', 'urgent'],
+    ['pengin mati wae', 'urgent'],
+    ['abdi hoyong maot', 'urgent'],
+    ['abdi teu kuat hirup', 'urgent'],
+    ['kalo gue gak ada pasti lebih baik', 'urgent'],
+    // eval-fix: new concern phrases
+    ['hampa banget akhir-akhir ini', 'concern'],
+    ['aku gak merasakan apa apa', 'concern'],
+    ['rasanya kosong terus', 'concern'],
+    ['mati rasa', 'concern'],
+    // eval-fix: everyday texts stay none
+    ['kosong jadwal hari ini', 'none'],
+    ['kantong kosong tanggal tua', 'none'],
+    ['rasanya enak banget', 'none'],
+    // accepted false positive: documented in docs/safety-phrases.md
+    ['hp mati rasa baterainya', 'concern'],
     // accepted false positives (conservative, see docs/safety-phrases.md)
     ['mau mati lampu', 'urgent'],
     ['aku tidak mau mati', 'urgent'],

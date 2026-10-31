@@ -154,6 +154,31 @@ describe('prompt rubric additions (fix round 1)', () => {
   });
 });
 
+describe('prompt rubric eval fix', () => {
+  it('urgent covers disappearing, not waking up, and regional languages', () => {
+    for (const s of [
+      'ilang selamanya',
+      'hilang selamanya',
+      'pergi selamanya',
+      'gak ada yang bakal nyariin',
+      'tidak mau bangun lagi',
+      'ra kuat urip',
+      'ora kuat urip',
+      'pengin mati',
+      'wis ora betah urip',
+      'hoyong maot',
+      'teu kuat hirup',
+      'Nilai maknanya, bukan bahasanya',
+    ])
+      expect(ANALYZE_SYSTEM_PROMPT).toContain(s);
+  });
+
+  it('concern covers lasting numbness and emptiness', () => {
+    for (const s of ['mati rasa', 'kosong', 'hampa', 'gak ngerasain apa-apa', 'berhari-hari atau berminggu-minggu', 'meski tanpa kata putus asa'])
+      expect(ANALYZE_SYSTEM_PROMPT).toContain(s);
+  });
+});
+
 describe('response schemas', () => {
   it('analyze schema restricts risk level and requires suggestions', () => {
     const s = ANALYZE_RESPONSE_SCHEMA as any;
