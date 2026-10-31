@@ -3,10 +3,12 @@ import type { Db } from './db';
 
 type Level = Exclude<RiskLevel, 'none'>;
 
+/** Upsert per catatan; tingkat tidak pernah turun (urgent tetap urgent). */
 export async function addPendingSafety(db: Db, entryId: string, level: Level): Promise<void> {
   await db.runAsync(
     `INSERT INTO pending_safety (entry_id, level) VALUES (?, ?)
-     ON CONFLICT (entry_id) DO UPDATE SET level = excluded.level`,
+     ON CONFLICT (entry_id) DO UPDATE SET level =
+       CASE WHEN pending_safety.level = 'urgent' THEN 'urgent' ELSE excluded.level END`,
     [entryId, level],
   );
 }
