@@ -21,7 +21,6 @@
       "package": "com.moji.journal"
     },
     "web": {
-      "output": "server",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -33,7 +32,11 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-notifications",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
