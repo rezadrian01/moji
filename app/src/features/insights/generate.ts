@@ -7,6 +7,7 @@ import { localInsightText } from '../../domain/insightText';
 import { computePatterns } from '../../domain/patterns';
 import { formatPeriodLabel, lastNDays, previousWeek } from '../../domain/period';
 import type { Insight } from '../../domain/types';
+import { noteInviteProblem } from '../ai/inviteProblem';
 
 export type GenerateOutcome =
   | { status: 'created'; insight: Insight }
@@ -53,6 +54,7 @@ async function generate(
         })),
       });
       if (r.ok) written = r.data;
+      else await noteInviteProblem(db, r.reason);
     } catch {
       // Kegagalan apa pun pada AI jatuh ke teks lokal.
     }

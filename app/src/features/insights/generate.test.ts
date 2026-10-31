@@ -3,6 +3,7 @@ import { createEntry } from '../../db/entriesRepo';
 import { setFeedback } from '../../db/feedbackRepo';
 import { listInsights, saveInsight } from '../../db/insightsRepo';
 import type { Db } from '../../db/db';
+import { getSettings } from '../../db/settingsRepo';
 import { createTestDb } from '../../db/testing/sqljsDb';
 import type { AiResult } from '../../ai/client';
 import type { WriteInsightRequest, WriteInsightResponse } from '../../ai/contract';
@@ -131,6 +132,16 @@ describe('generateWeeklyIfDue', () => {
     expect(Object.keys(out.insight.patternTexts)).toEqual(
       out.insight.summary.patterns.map((p) => p.key),
     );
+  });
+
+  it.each([
+    ['invalid_invite', 'invalid'],
+    ['revoked_invite', 'revoked'],
+  ] as const)('%s dari writeInsight menandai masalah kode, insight tetap lokal', async (reason, problem) => {
+    await addEntries(5);
+    const out = await generateWeeklyIfDue(deps(fakeAi({ ok: false, reason })));
+    expect(out.status === 'created' && out.insight.source).toBe('local');
+    expect((await getSettings(db)).aiCodeProblem).toBe(problem);
   });
 
   it('memakai teks lokal saat writeInsight melempar error', async () => {

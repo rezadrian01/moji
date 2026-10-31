@@ -7,6 +7,7 @@ import { addPendingSafety } from '../../db/pendingSafetyRepo';
 import { getSettings, updateSettings } from '../../db/settingsRepo';
 import { checkLocalSafety, isWorsening, maxRisk, WORSENING_RULE } from '../../domain/safety';
 import { CONTEXTS, COPINGS, EXPERIENCES } from '../../domain/taxonomy';
+import { noteInviteProblem } from '../ai/inviteProblem';
 import type { Entry, RiskLevel, Suggestions } from '../../domain/types';
 
 export interface PostSaveDeps {
@@ -84,7 +85,10 @@ async function runAi(entry: Entry, request: AnalyzeEntryRequest, deps: PostSaveD
   const { db } = deps;
   try {
     const result = await deps.ai.analyzeEntry(request);
-    if (!result.ok) return;
+    if (!result.ok) {
+      await noteInviteProblem(db, result.reason);
+      return;
+    }
 
     const fresh = await getEntry(db, entry.id);
     if (!fresh) return;

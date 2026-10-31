@@ -355,4 +355,25 @@ describe('runPostSave: AI task', () => {
     expect(showSupport).not.toHaveBeenCalled();
     expect(await takePendingSafety(db)).toBeNull();
   });
+
+  it.each<[AnalyzeResult, 'invalid' | 'revoked']>([
+    [{ ok: false, reason: 'invalid_invite' }, 'invalid'],
+    [{ ok: false, reason: 'revoked_invite' }, 'revoked'],
+  ])('a 401/403 from analyzeEntry (%j) marks the invite problem and leaves AI settings alone', async (r, problem) => {
+    await updateSettings(db, { aiEnabled: true, aiConsentAt: '2026-10-31T09:00:00.000+07:00' });
+    const { deps } = makeDeps({ analyze: async () => r });
+    const { aiTask } = await runPostSave(await save({ mood: 2, note: 'hari ini berat' }), deps);
+    await aiTask;
+    const settings = await getSettings(db);
+    expect(settings.aiCodeProblem).toBe(problem);
+    expect(settings.aiEnabled).toBe(true);
+    expect(settings.aiConsentAt).toBe('2026-10-31T09:00:00.000+07:00');
+  });
+
+  it('a network failure does not mark an invite problem', async () => {
+    const { deps } = makeDeps({ analyze: async () => ({ ok: false, reason: 'network' }) });
+    const { aiTask } = await runPostSave(await save({ mood: 2, note: 'hari ini berat' }), deps);
+    await aiTask;
+    expect((await getSettings(db)).aiCodeProblem).toBeNull();
+  });
 });

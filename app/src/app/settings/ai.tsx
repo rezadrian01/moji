@@ -5,6 +5,7 @@ import { getInviteCode } from '@/ai/inviteStore';
 import { getSettings, updateSettings } from '@/db/settingsRepo';
 import { useDb, useDbQuery } from '@/db/useDbQuery';
 import { AiConsentText } from '@/features/ai/AiConsentText';
+import { INVITE_PROBLEM_TEXT } from '@/features/ai/inviteProblem';
 import { InviteCodeForm } from '@/features/ai/InviteCodeForm';
 import { Button } from '@/ui/Button';
 import { Screen } from '@/ui/Screen';
@@ -38,8 +39,11 @@ export default function AiSettingsScreen() {
   }
 
   async function onValid() {
+    // Kode baru yang valid sudah tersimpan: penanda masalah kode lama dihapus.
     if (form === 'enable') {
-      await updateSettings(db, { aiEnabled: true, aiConsentAt: new Date().toISOString() });
+      await updateSettings(db, { aiEnabled: true, aiConsentAt: new Date().toISOString(), aiCodeProblem: null });
+    } else {
+      await updateSettings(db, { aiCodeProblem: null });
     }
     setForm('none');
   }
@@ -59,6 +63,7 @@ export default function AiSettingsScreen() {
           onValueChange={(v) => void toggle(v)}
         />
       </View>
+      {settings.aiCodeProblem ? <Text>{INVITE_PROBLEM_TEXT[settings.aiCodeProblem]}</Text> : null}
       {form !== 'none' ? (
         <>
           <InviteCodeForm onValid={() => void onValid()} />

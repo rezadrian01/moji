@@ -87,6 +87,9 @@ export interface Contact {
   phone: string | null;
   url: string | null;
 }
+/** Kode undangan tersimpan ditolak server: 401 -> 'invalid', 403 -> 'revoked'. */
+export type AiCodeProblem = 'invalid' | 'revoked';
+
 export interface AppSettings {
   onboardingDone: boolean;
   aiEnabled: boolean;
@@ -97,6 +100,7 @@ export interface AppSettings {
   campusContact: Contact | null;
   personalContact: Contact | null;
   lastWorseningPromptAt: string | null;
+  aiCodeProblem: AiCodeProblem | null;
 }
 export const DEFAULT_SETTINGS: AppSettings = {
   onboardingDone: false,
@@ -108,4 +112,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   campusContact: null,
   personalContact: null,
   lastWorseningPromptAt: null,
+  aiCodeProblem: null,
 };
