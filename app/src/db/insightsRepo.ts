@@ -35,12 +35,37 @@ function fromRow(r: InsightRow): Insight {
   };
 }
 
+/** Dilempar saat insight mingguan untuk weekKey yang sama sudah ada. */
+export class DuplicateWeeklyInsightError extends Error {
+  constructor(public readonly weekKey: string) {
+    super(`Insight mingguan untuk ${weekKey} sudah ada`);
+    this.name = 'DuplicateWeeklyInsightError';
+  }
+}
+
 export async function saveInsight(
   db: Db,
   insight: Omit<Insight, 'id' | 'createdAt'>,
   now: Date,
 ): Promise<Insight> {
   const saved: Insight = { ...insight, id: newId(), createdAt: toLocalIso(now) };
+  if (saved.weekKey !== null && (await hasWeeklyInsight(db, saved.weekKey))) {
+    throw new DuplicateWeeklyInsightError(saved.weekKey);
+  }
+  try {
+    await insertInsight(db, saved);
+  } catch (e) {
+    // Balapan antar-penulis: indeks UNIQUE menangkap duplikat yang lolos pengecekan di atas.
+    if (saved.weekKey !== null && /UNIQUE/i.test(String((e as Error)?.message))) {
+      throw new DuplicateWeeklyInsightError(saved.weekKey);
+    }
+    throw e;
+  }
+  emitDataChanged('insights');
+  return saved;
+}
+
+async function insertInsight(db: Db, saved: Insight): Promise<void> {
   await db.runAsync(
     `INSERT INTO insights (id, created_at, kind, week_key, period_start, period_end, summary, text,
        pattern_texts, questions, source, reflection)
@@ -60,8 +85,6 @@ export async function saveInsight(
       saved.reflection,
     ],
   );
-  emitDataChanged('insights');
-  return saved;
 }
 
 export async function getInsight(db: Db, id: string): Promise<Insight | null> {

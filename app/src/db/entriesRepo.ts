@@ -33,25 +33,10 @@ function fromRow(r: EntryRow): Entry {
   };
 }
 
-async function insertOrReplace(db: Db, e: Entry): Promise<void> {
-  await db.runAsync(
-    `INSERT OR REPLACE INTO entries (id, created_at, updated_at, mood, note, contexts, experiences,
-       copings, ai_suggested, pending_suggestions, safety_shown_level)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      e.id,
-      e.createdAt,
-      e.updatedAt,
-      e.mood,
-      e.note,
-      JSON.stringify(e.contexts),
-      JSON.stringify(e.experiences),
-      JSON.stringify(e.copings),
-      JSON.stringify(e.aiSuggested),
-      e.pendingSuggestions ? JSON.stringify(e.pendingSuggestions) : null,
-      e.safetyShownLevel,
-    ],
-  );
+function toMs(iso: string): number {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) throw new Error(`Tanggal tidak valid: ${iso}`);
+  return ms;
 }
 
 export async function createEntry(db: Db, input: NewEntry, now: Date): Promise<Entry> {
@@ -69,7 +54,25 @@ export async function createEntry(db: Db, input: NewEntry, now: Date): Promise<E
     pendingSuggestions: null,
     safetyShownLevel: 'none',
   };
-  await insertOrReplace(db, entry);
+  await db.runAsync(
+    `INSERT INTO entries (id, created_at, created_at_ms, updated_at, mood, note, contexts, experiences,
+       copings, ai_suggested, pending_suggestions, safety_shown_level)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      entry.id,
+      entry.createdAt,
+      toMs(entry.createdAt),
+      entry.updatedAt,
+      entry.mood,
+      entry.note,
+      JSON.stringify(entry.contexts),
+      JSON.stringify(entry.experiences),
+      JSON.stringify(entry.copings),
+      JSON.stringify(entry.aiSuggested),
+      null,
+      entry.safetyShownLevel,
+    ],
+  );
   emitDataChanged('entries');
   return entry;
 }
@@ -79,18 +82,41 @@ export async function getEntry(db: Db, id: string): Promise<Entry | null> {
   return row ? fromRow(row) : null;
 }
 
+type Patch = Partial<Omit<Entry, 'id' | 'createdAt'>> & { createdAt?: string };
+
 export async function updateEntry(
   db: Db,
   id: string,
-  patch: Partial<Omit<Entry, 'id' | 'createdAt'>> & { createdAt?: string },
+  patch: Patch,
   now: Date,
 ): Promise<Entry | null> {
-  const existing = await getEntry(db, id);
-  if (!existing) return null;
-  const next: Entry = { ...existing, ...patch, id, updatedAt: toLocalIso(now) };
-  await insertOrReplace(db, next);
+  const sets: string[] = ['updated_at = ?'];
+  const params: unknown[] = [toLocalIso(now)];
+  const add = (col: string, value: unknown) => {
+    sets.push(`${col} = ?`);
+    params.push(value);
+  };
+  const json = (v: unknown) => JSON.stringify(v);
+  if (patch.createdAt !== undefined) {
+    add('created_at', patch.createdAt);
+    add('created_at_ms', toMs(patch.createdAt));
+  }
+  if (patch.mood !== undefined) add('mood', patch.mood);
+  if (patch.note !== undefined) add('note', patch.note);
+  if (patch.contexts !== undefined) add('contexts', json(patch.contexts));
+  if (patch.experiences !== undefined) add('experiences', json(patch.experiences));
+  if (patch.copings !== undefined) add('copings', json(patch.copings));
+  if (patch.aiSuggested !== undefined) add('ai_suggested', json(patch.aiSuggested));
+  if (patch.pendingSuggestions !== undefined) {
+    add('pending_suggestions', patch.pendingSuggestions ? json(patch.pendingSuggestions) : null);
+  }
+  if (patch.safetyShownLevel !== undefined) add('safety_shown_level', patch.safetyShownLevel);
+  if (patch.updatedAt !== undefined) params[0] = patch.updatedAt;
+  params.push(id);
+  const { changes } = await db.runAsync(`UPDATE entries SET ${sets.join(', ')} WHERE id = ?`, params);
+  if (changes === 0) return null;
   emitDataChanged('entries');
-  return next;
+  return getEntry(db, id);
 }
 
 export async function deleteEntry(db: Db, id: string): Promise<void> {
@@ -101,6 +127,7 @@ export async function deleteEntry(db: Db, id: string): Promise<void> {
   emitDataChanged('entries');
 }
 
+/** `from` inklusif, `to` eksklusif; ISO dengan offset apa pun, dibandingkan sebagai instan. */
 export async function listEntries(
   db: Db,
   range: { from?: string; to?: string },
@@ -108,15 +135,15 @@ export async function listEntries(
   const where: string[] = [];
   const params: unknown[] = [];
   if (range.from !== undefined) {
-    where.push('created_at >= ?');
-    params.push(range.from);
+    where.push('created_at_ms >= ?');
+    params.push(toMs(range.from));
   }
   if (range.to !== undefined) {
-    where.push('created_at < ?');
-    params.push(range.to);
+    where.push('created_at_ms < ?');
+    params.push(toMs(range.to));
   }
   const rows = await db.getAllAsync<EntryRow>(
-    `SELECT * FROM entries${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY created_at DESC`,
+    `SELECT * FROM entries${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY created_at_ms DESC, rowid DESC`,
     params,
   );
   return rows.map(fromRow);

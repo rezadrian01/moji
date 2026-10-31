@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS } from '../domain/types';
 import type { Db } from './db';
 import { createTestDb } from './testing/sqljsDb';
 import {
+  DuplicateWeeklyInsightError,
   getInsight,
   hasWeeklyInsight,
   latestInsight,
@@ -60,6 +61,13 @@ describe('insightsRepo', () => {
     await expect(saveInsight(db, baseInsight(), new Date())).rejects.toThrow();
   });
 
+  it('throws DuplicateWeeklyInsightError for a duplicate weekKey', async () => {
+    await saveInsight(db, baseInsight(), new Date());
+    await expect(saveInsight(db, baseInsight(), new Date())).rejects.toBeInstanceOf(
+      DuplicateWeeklyInsightError,
+    );
+  });
+
   it('allows many on-demand insights with null weekKey', async () => {
     await saveInsight(db, baseInsight({ kind: 'on_demand', weekKey: null }), new Date());
     await saveInsight(db, baseInsight({ kind: 'on_demand', weekKey: null }), new Date());
@@ -84,6 +92,15 @@ describe('insightsRepo', () => {
 });
 
 describe('feedbackRepo', () => {
+  it('latest wins by instant even with mixed offsets and missing milliseconds', async () => {
+    // Later instant (04:00Z) but lexicographically smaller than the earlier one (03:00Z string "10:00+07").
+    await setFeedback(db, 'i1', 'k', 'tidak_sesuai', new Date('2026-11-01T03:00:00Z'));
+    await setFeedback(db, 'i2', 'k', 'sesuai', new Date('2026-11-01T04:00:00Z'));
+    expect(await rejectedPatternKeys(db)).toEqual([]);
+    await setFeedback(db, 'i3', 'k', 'tidak_sesuai', new Date('2026-11-01T05:00:00Z'));
+    expect(await rejectedPatternKeys(db)).toEqual(['k']);
+  });
+
   it('upserts per (insight, key) and reads as a record', async () => {
     await setFeedback(db, 'i1', 'k1', 'sesuai', new Date('2026-11-01T00:00:00Z'));
     await setFeedback(db, 'i1', 'k1', 'sebagian', new Date('2026-11-01T01:00:00Z'));
@@ -145,6 +162,15 @@ describe('settingsRepo', () => {
     expect(await getDraft(db)).toEqual({ mood: 2, note: 'setengah jadi' });
     await saveDraft(db, null);
     expect(await getDraft(db)).toBeNull();
+  });
+
+  it('saveDraft emits a settings change', async () => {
+    const seen: string[] = [];
+    const off = onDataChanged((t) => seen.push(t));
+    await saveDraft(db, { mood: 2 });
+    await saveDraft(db, null);
+    off();
+    expect(seen).toEqual(['settings', 'settings']);
   });
 
   it('wipeAll empties every table', async () => {

@@ -90,6 +90,85 @@ describe('entriesRepo', () => {
     expect(ranged.map((e) => e.id)).toEqual([b.id]);
   });
 
+  it('treats Z bounds and +07:00 bounds as the same instants', async () => {
+    const mk = (createdAt: string) =>
+      createEntry(db, { mood: 3, createdAt }, t('2026-10-31T00:00:00Z'));
+    const sun = await mk('2026-10-25T20:00:00+07:00'); // 13:00Z, before Monday WIB
+    const monStart = await mk('2026-10-26T00:00:00+07:00'); // exactly 17:00Z Sunday
+    const monLater = await mk('2026-10-26T09:30:00.500+07:00');
+    const nextMon = await mk('2026-11-02T00:00:00+07:00'); // exactly `to`
+    const viaZ = await listEntries(db, {
+      from: '2026-10-25T17:00:00.000Z',
+      to: '2026-11-01T17:00:00.000Z',
+    });
+    const viaWib = await listEntries(db, {
+      from: '2026-10-26T00:00:00+07:00',
+      to: '2026-11-02T00:00:00+07:00',
+    });
+    expect(viaZ.map((e) => e.id)).toEqual([monLater.id, monStart.id]);
+    expect(viaWib.map((e) => e.id)).toEqual(viaZ.map((e) => e.id));
+    expect(viaZ.map((e) => e.id)).not.toContain(sun.id);
+    expect(viaZ.map((e) => e.id)).not.toContain(nextMon.id);
+  });
+
+  it('includes an entry exactly at from with or without milliseconds', async () => {
+    const e = await createEntry(
+      db,
+      { mood: 3, createdAt: '2026-10-26T00:00:00+07:00' },
+      t('2026-10-31T00:00:00Z'),
+    );
+    for (const from of ['2026-10-26T00:00:00+07:00', '2026-10-25T17:00:00.000Z']) {
+      expect((await listEntries(db, { from })).map((x) => x.id)).toEqual([e.id]);
+    }
+  });
+
+  it('orders by instant across mixed offsets', async () => {
+    const mk = (createdAt: string) =>
+      createEntry(db, { mood: 3, createdAt }, t('2026-10-31T00:00:00Z'));
+    const a = await mk('2026-10-26T10:00:00+07:00'); // 03:00Z
+    const b = await mk('2026-10-26T04:00:00Z'); // later instant, smaller-looking string
+    expect((await listEntries(db, {})).map((e) => e.id)).toEqual([b.id, a.id]);
+  });
+
+  it('re-indexes a backdated entry when createdAt changes', async () => {
+    const e = await createEntry(
+      db,
+      { mood: 3, createdAt: '2026-10-30T08:00:00+07:00' },
+      t('2026-10-31T00:00:00Z'),
+    );
+    await updateEntry(db, e.id, { createdAt: '2026-10-20T08:00:00+07:00' }, new Date());
+    const hits = await listEntries(db, {
+      from: '2026-10-20T00:00:00+07:00',
+      to: '2026-10-21T00:00:00+07:00',
+    });
+    expect(hits.map((x) => x.id)).toEqual([e.id]);
+  });
+
+  it('updateEntry returns null and keeps a deleted row deleted', async () => {
+    const e = await createEntry(db, { mood: 3 }, new Date());
+    await deleteEntry(db, e.id);
+    expect(await updateEntry(db, e.id, { mood: 4 }, new Date())).toBeNull();
+    expect(await getEntry(db, e.id)).toBeNull();
+  });
+
+  it('keeps both of two different-field patches applied back to back', async () => {
+    const e = await createEntry(db, { mood: 3 }, new Date());
+    await Promise.all([
+      updateEntry(db, e.id, { note: 'a' }, new Date()),
+      updateEntry(db, e.id, { aiSuggested: ['x'] }, new Date()),
+    ]);
+    const loaded = await getEntry(db, e.id);
+    expect(loaded?.note).toBe('a');
+    expect(loaded?.aiSuggested).toEqual(['x']);
+  });
+
+  it('drops patch keys whose value is undefined', async () => {
+    const e = await createEntry(db, { mood: 3, note: 'tetap' }, new Date());
+    const u = await updateEntry(db, e.id, { mood: undefined, note: undefined }, new Date());
+    expect(u?.mood).toBe(3);
+    expect(u?.note).toBe('tetap');
+  });
+
   it('updateEntry changes updatedAt but not createdAt unless given', async () => {
     const e = await createEntry(
       db,

@@ -11,10 +11,11 @@ export async function setFeedback(
   now: Date,
 ): Promise<void> {
   await db.runAsync(
-    `INSERT INTO pattern_feedback (insight_id, pattern_key, value, updated_at)
-     VALUES (?, ?, ?, ?)
-     ON CONFLICT (insight_id, pattern_key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-    [insightId, patternKey, value, toLocalIso(now)],
+    `INSERT INTO pattern_feedback (insight_id, pattern_key, value, updated_at, updated_at_ms)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT (insight_id, pattern_key) DO UPDATE SET value = excluded.value,
+       updated_at = excluded.updated_at, updated_at_ms = excluded.updated_at_ms`,
+    [insightId, patternKey, value, toLocalIso(now), now.getTime()],
   );
   emitDataChanged('feedback');
 }
@@ -33,7 +34,7 @@ export async function getFeedbackForInsight(
 /** Key yang feedback terakhirnya (lintas insight) 'tidak_sesuai'. */
 export async function rejectedPatternKeys(db: Db): Promise<string[]> {
   const rows = await db.getAllAsync<{ pattern_key: string; value: FeedbackValue }>(
-    'SELECT pattern_key, value FROM pattern_feedback ORDER BY updated_at ASC, rowid ASC',
+    'SELECT pattern_key, value FROM pattern_feedback ORDER BY updated_at_ms ASC, rowid ASC',
   );
   const latest = new Map<string, FeedbackValue>();
   for (const r of rows) latest.set(r.pattern_key, r.value);

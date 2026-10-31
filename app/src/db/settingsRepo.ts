@@ -38,6 +38,7 @@ export async function getDraft(db: Db): Promise<Partial<NewEntry> | null> {
 export async function saveDraft(db: Db, d: Partial<NewEntry> | null): Promise<void> {
   if (d === null) await db.runAsync('DELETE FROM kv WHERE key = ?', [DRAFT_KEY]);
   else await writeKv(db, DRAFT_KEY, d);
+  emitDataChanged('settings');
 }
 
 export async function wipeAll(db: Db): Promise<void> {

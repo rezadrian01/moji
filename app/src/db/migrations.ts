@@ -4,6 +4,7 @@ const V1 = `
 CREATE TABLE entries (
   id TEXT PRIMARY KEY NOT NULL,
   created_at TEXT NOT NULL,
+  created_at_ms INTEGER NOT NULL,
   updated_at TEXT NOT NULL,
   mood INTEGER NOT NULL,
   note TEXT,
@@ -14,7 +15,7 @@ CREATE TABLE entries (
   pending_suggestions TEXT,
   safety_shown_level TEXT NOT NULL DEFAULT 'none'
 );
-CREATE INDEX idx_entries_created_at ON entries (created_at);
+CREATE INDEX idx_entries_created_at_ms ON entries (created_at_ms);
 CREATE TABLE insights (
   id TEXT PRIMARY KEY NOT NULL,
   created_at TEXT NOT NULL,
@@ -35,6 +36,7 @@ CREATE TABLE pattern_feedback (
   pattern_key TEXT NOT NULL,
   value TEXT NOT NULL,
   updated_at TEXT NOT NULL,
+  updated_at_ms INTEGER NOT NULL,
   PRIMARY KEY (insight_id, pattern_key)
 );
 CREATE TABLE pending_safety (
