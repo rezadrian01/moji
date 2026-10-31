@@ -3,8 +3,8 @@ import { DAILY_MESSAGES, WEEKLY_NUDGE } from './messages';
 const FORBIDDEN = /hari ini kamu belum|sudah \d+ hari|streak|jangan lupa/i;
 
 describe('reminder messages', () => {
-  it('has at least 5 daily variations', () => {
-    expect(new Set(DAILY_MESSAGES).size).toBeGreaterThanOrEqual(5);
+  it('has a different daily text for each of the 7 weekdays', () => {
+    expect(new Set(DAILY_MESSAGES).size).toBeGreaterThanOrEqual(7);
   });
 
   it('uses no guilt or streak copy', () => {
