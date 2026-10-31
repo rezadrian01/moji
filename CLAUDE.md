@@ -1,20 +1,37 @@
 # MOJI: panduan kerja untuk Claude dan subagent
 
-MOJI adalah aplikasi jurnal dan mood tracker yang ramah kesehatan mental. Platformnya Android, dibangun dengan Expo, dan AI-nya memakai Gemini di Vertex AI lewat Cloud Functions.
+MOJI adalah aplikasi jurnal dan mood tracker yang ramah kesehatan mental. Platformnya Android, dibangun dengan Expo, dan AI-nya memakai Gemini di Vertex AI lewat backend `functions/`.
 
 - **Spec (sumber kebenaran):** `docs/superpowers/specs/2026-10-31-moji-design.md`
-- **Plan implementasi:** `docs/superpowers/plans/`
+- **Plan implementasi:** `docs/superpowers/plans/` (MVP sudah selesai seluruhnya)
+- **Cara menjalankan:** `./run-demo.sh` di root proyek, panduannya di `docs/RUNNING.md`. Setup lengkap ada di `docs/SETUP.md`.
+
+## Status deployment saat ini: mode demo lokal
+
+Keputusan tim 31 Okt 2026:
+- Demo lewat emulator Android Studio atau HP USB.
+- Backend dijalankan di laptop (`npm run dev:server` di `functions/`, port 8080), dan HP/emulator mengaksesnya lewat `adb reverse tcp:8080 tcp:8080`.
+- Vertex AI diakses dengan ADC developer. Project: `general-projects-510902`, model `gemini-3.5-flash`.
+- Kode undangan disimpan di file `functions/data/invites.json` (`MOJI_STORE=file`).
+- APK release dibangun lokal dengan `npx expo run:android --variant release`. EAS dan Cloud Run tetap tersedia sebagai opsi (lihat `docs/SETUP.md` bagian D dan E).
+- Izin HTTP cleartext Android aktif hanya demi `http://localhost`. Tinjau ulang sebelum ada server online.
 
 ## Struktur repo
 
 | Folder | Isi |
 |---|---|
-| `app/` | Aplikasi Expo SDK 58 (TypeScript, expo-router). Route ada di `app/src/app/`, kode lain di `app/src/`. **Baca `app/AGENTS.md` sebelum menyentuh API Expo/RN.** |
-| `functions/` | Cloud Functions + Vertex AI + Firestore (kode undangan). Belum dibuat; dibuat oleh plan. |
-| `functions/src/admin/` | Skrip admin kode undangan (`npm run invites` di `functions/`). |
+| `app/` | Aplikasi Expo SDK 58 (TypeScript, expo-router). Route ada di `app/src/app/`, kode lain di `app/src/`. **Baca `app/AGENTS.md` sebelum menyentuh API Expo/RN.** `app/android/` dihasilkan prebuild (di-ignore). |
+| `functions/` | Backend Node 24 + TypeScript (functions-framework): router `/health`, `/analyzeEntry`, `/writeInsight`, klien Gemini/Vertex, guardrail, kode undangan (`file` atau `firestore`), eval prompt (`eval/`). |
+| `functions/src/admin/` | CLI kode undangan (`npm run invites -- create/list/revoke` di `functions/`). |
+| `contract/fixtures/` | Contoh request/response API yang diuji di kedua sisi. |
+| `docs/` | `RUNNING.md`, `SETUP.md`, `release-checklist.md`, `safety-phrases.md`, `manual/` (PDF manual dan katalog UI). |
 | `docs/superpowers/` | Spec, plan, laporan task. |
 
-## Perintah (jalankan dari `app/`)
+Rahasia dan data lokal yang **tidak pernah di-commit**: `functions/.env`, `functions/data/`, `app/.env.local`, `.run/`.
+
+## Perintah
+
+Dari `app/`:
 
 ```bash
 npm test -- <path-atau-pola>   # test terfokus
@@ -24,6 +41,14 @@ npm run lint
 npx expo install <pkg>         # SELALU dipakai untuk dependency, bukan npm install <pkg>
 ```
 
+Dari `functions/`:
+
+```bash
+npm test                       # vitest (tidak pernah memanggil Vertex sungguhan)
+npm run typecheck
+npm run eval                   # eval prompt ke Vertex sungguhan; wajib 32/32 setelah mengubah prompt/model
+```
+
 ## Aturan wajib
 
 1. **TDD.** Tulis test yang gagal dulu (RED), lalu implementasi minimal (GREEN), lalu refactor. Bukti RED dan GREEN dicatat di laporan task.
@@ -31,6 +56,7 @@ npx expo install <pkg>         # SELALU dipakai untuk dependency, bukan npm inst
 3. **Privasi.** Teks jurnal tidak pernah disimpan di server dan tidak pernah di-log. Tidak boleh ada rahasia atau API key di dalam aplikasi.
 4. **Bahasa produk.** Teks UI dalam Bahasa Indonesia, menyapa dengan "kamu", nada hangat, tidak menghakimi, tidak mendiagnosis. Ikuti spec §8 dan §7.3.
 5. **Selesai berarti:** test terfokus dan seluruh suite hijau, `typecheck` dan `lint` bersih, lalu di-commit.
+6. **Safety lokal dan prompt:** setiap perubahan di `app/src/domain/safety*.ts` atau `functions/src/ai/prompts.ts` harus diikuti `npm run eval` (32/32) dan memperbarui `docs/safety-phrases.md`.
 
 ## Alur pengembangan: TDD + subagent paralel
 

@@ -12,7 +12,7 @@ Untuk demo di laptop (HP lewat USB atau emulator). Detail langkah ada di `docs/S
 - [ ] Kode undangan dibuat: `npm run invites -- create 10 --prefix R`.
 - [ ] `npm run dev:server` berjalan.
 - [ ] `adb reverse tcp:8080 tcp:8080` sudah dijalankan (ulangi setelah HP dicabut-pasang atau emulator di-restart).
-- [ ] `app/.env.local` berisi `EXPO_PUBLIC_API_URL=http://localhost:8080` (`EXPO_PUBLIC_DEV_TOOLS=0` untuk build responden), lalu app dibangun dan dipasang: `cd app && npx expo run:android --variant release` (emulator `Medium_Phone_API_37.0` atau HP USB).
+- [ ] `app/.env.local` berisi `EXPO_PUBLIC_API_URL=http://localhost:8080` (`EXPO_PUBLIC_DEV_TOOLS=0` untuk build responden), lalu app dibangun dan dipasang: `cd app && npx expo run:android --variant release` (emulator Android Studio milikmu atau HP USB), atau cukup `./run-demo.sh`.
 - [ ] `curl -H "X-Moji-Invite: <kode>" http://localhost:8080/health` menjawab `{"valid":true}`.
 
 ---
@@ -32,7 +32,8 @@ Checklist di bawah untuk rilis APK ke responden.
 - [ ] **Budget alert** terpasang (Billing, Budgets & alerts) dengan ambang mis. 50%, 90%, 100% dan notifikasi email. Lihat `functions/README.md`.
 - [ ] Deploy function sesuai `functions/README.md` (bagian "Deploy").
 - [ ] `curl` ke `/health` dengan header `X-Moji-Invite: <kode uji>` mengembalikan sukses. Tanpa header atau dengan kode salah harus ditolak.
-- [ ] Buat kode undangan dari folder `functions/`: `npm run invites -- create 20` (tambahkan `--prefix R` bila perlu). Sesuaikan jumlah dengan jumlah responden.
+- [ ] Function di-deploy dengan `MOJI_STORE=firestore` (lihat `docs/SETUP.md` D6); tanpa itu kode undangan hilang saat instance restart.
+- [ ] Buat kode undangan di Firestore dari folder `functions/`: `MOJI_STORE=firestore npm run invites -- create 20` (tambahkan `--prefix R` bila perlu). Sesuaikan jumlah dengan jumlah responden.
 - [ ] **Simpan pemetaan label ke responden di luar repo** (mis. di penyimpan pribadi). Jangan commit CSV keluaran atau pemetaannya.
 - [ ] Isi `EXPO_PUBLIC_API_URL` di environment EAS (`eas env:create`, lingkungan `preview`). Ini satu-satunya konfigurasi klien; tidak ada rahasia di APK.
 
@@ -62,6 +63,7 @@ Checklist di bawah untuk rilis APK ke responden.
 ## 6. Build
 
 - [ ] `EXPO_PUBLIC_DEV_TOOLS` **tidak aktif** di build untuk responden (periksa environment EAS profil `preview`).
+- [ ] **Izin HTTP cleartext** (plugin `expo-build-properties` di `app/app.json`) hanya untuk demo lokal ke `http://localhost`. Untuk build responden yang memanggil server online: pastikan `EXPO_PUBLIC_API_URL` memakai **HTTPS**, lalu matikan izin cleartext dan pastikan test `releaseConfig` disesuaikan.
 - [ ] `npm test`, `npm run typecheck`, `npm run lint` bersih di `app/`; `npx expo-doctor` bersih.
 - [ ] `eas build --profile preview --platform android`.
 - [ ] **Keystore dikelola EAS. Jangan dihapus atau diganti**; keystore berbeda membuat Android menolak update di atas data lama. Package tetap `com.moji.journal`.

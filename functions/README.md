@@ -55,8 +55,10 @@ gcloud functions deploy api \
   --source=. --entry-point=api \
   --trigger-http --allow-unauthenticated \
   --service-account=<SA_EMAIL> \
-  --set-env-vars MOJI_MODEL=<nama-model>,MOJI_VERTEX_LOCATION=global,MOJI_PER_CODE_LIMIT=50,MOJI_GLOBAL_LIMIT=1000
+  --set-env-vars MOJI_STORE=firestore,MOJI_MODEL=<nama-model>,MOJI_VERTEX_LOCATION=global,MOJI_PER_CODE_LIMIT=50,MOJI_GLOBAL_LIMIT=1000
 ```
+
+`MOJI_STORE=firestore` wajib di Cloud Run. Nilai bawaannya `file`, dan file di Cloud Run hilang setiap instance di-restart.
 
 Build: `package.json` `main` menunjuk `dist/index.js`, sedangkan `dist/` tidak ikut di-upload. Karena itu ada script `gcp-build` (`tsc -p tsconfig.build.json`): Cloud Build menginstal `dependencies` dan `devDependencies` lebih dulu (per dokumentasi buildpacks Node.js Google Cloud), lalu hanya menjalankan `gcp-build`, sehingga TypeScript dikompilasi di sana. `.gcloudignore` mengecualikan `node_modules`, test, dan file lokal, tetapi tetap menyertakan `src/`, `tsconfig.json`, dan `tsconfig.build.json`. Jangan hapus `typescript` dan `@types/node` dari devDependencies.
 

@@ -138,7 +138,8 @@ cd functions
 npm run dev:server                 # http://localhost:8080
 
 # Terminal 2: emulator (atau colokkan HP via USB)
-~/Android/Sdk/emulator/emulator -avd Medium_Phone_API_37.0
+~/Android/Sdk/emulator/emulator -list-avds          # lihat nama emulator yang kamu punya
+~/Android/Sdk/emulator/emulator -avd <NAMA_AVD>
 
 # Terminal 3: hubungkan device ke laptop, lalu build & pasang aplikasi
 adb reverse tcp:8080 tcp:8080      # ulangi setiap HP dicabut-pasang / emulator di-restart
