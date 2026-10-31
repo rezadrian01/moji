@@ -50,6 +50,8 @@ export default function PrivacyScreen() {
     }
     setBusy(false);
     close();
+    // Tutup layar pengaturan yang menumpuk dulu, supaya tombol kembali tidak membuka layar lama.
+    if (router.canDismiss()) router.dismissAll();
     router.replace('/onboarding');
   }
 
