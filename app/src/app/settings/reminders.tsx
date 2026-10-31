@@ -19,15 +19,26 @@ export default function RemindersScreen() {
   const db = useDb();
   const { data: settings } = useDbQuery(getSettings, ['settings'], []);
   const [denied, setDenied] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   async function change(patch: Partial<AppSettings>) {
-    const next = await updateSettings(db, patch);
-    await applyReminderSettings(next);
+    setFailed(false);
+    try {
+      const next = await updateSettings(db, patch);
+      await applyReminderSettings(next);
+    } catch {
+      setFailed(true);
+    }
   }
 
   async function toggle(patch: Partial<AppSettings>) {
     if (Object.values(patch)[0]) {
-      const ok = await ensureNotificationPermission();
+      let ok = false;
+      try {
+        ok = await ensureNotificationPermission();
+      } catch {
+        ok = false;
+      }
       if (!ok) {
         setDenied(true);
         return;
@@ -38,6 +49,7 @@ export default function RemindersScreen() {
   }
 
   const daily = settings?.reminderTime ?? null;
+  const hours = daily !== null && !HOURS.includes(daily) ? [...HOURS, daily].sort() : HOURS;
   const row = { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48 } as const;
 
   return (
@@ -62,7 +74,7 @@ export default function RemindersScreen() {
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ flexDirection: 'row', gap: theme.space(2) }}>
-                  {HOURS.map((h) => (
+                  {hours.map((h) => (
                     <Chip key={h} label={h} selected={h === daily} onToggle={() => change({ reminderTime: h })} />
                   ))}
                 </View>
@@ -98,6 +110,7 @@ export default function RemindersScreen() {
             </View>
           ) : null}
 
+          {failed ? <Text muted>Belum berhasil menyimpan. Coba lagi sebentar lagi, ya.</Text> : null}
           {denied ? (
             <Text muted>
               Izin notifikasi belum aktif, jadi pengingat belum bisa dinyalakan. Kamu bisa mengizinkannya di

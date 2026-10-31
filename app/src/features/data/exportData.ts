@@ -49,7 +49,7 @@ export async function shareExport(db: Db, now: Date): Promise<void> {
   const name = `moji-export-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.json`;
   const file = new File(Paths.cache, name);
   file.create({ overwrite: true });
-  file.write(JSON.stringify(data, null, 2));
+  await file.write(JSON.stringify(data, null, 2));
   await Sharing.shareAsync(file.uri, {
     mimeType: 'application/json',
     dialogTitle: 'Ekspor data MOJI',

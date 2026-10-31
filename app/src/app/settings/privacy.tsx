@@ -20,6 +20,7 @@ export default function PrivacyScreen() {
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
 
   function close() {
     setStep('closed');
@@ -37,13 +38,18 @@ export default function PrivacyScreen() {
 
   async function onDelete() {
     setBusy(true);
+    setDeleteFailed(false);
     try {
       await resetApp(db);
-      close();
-      router.replace('/onboarding');
-    } finally {
+    } catch {
+      setDeleteFailed(true);
       setBusy(false);
+      close();
+      return;
     }
+    setBusy(false);
+    close();
+    router.replace('/onboarding');
   }
 
   return (
@@ -85,6 +91,7 @@ export default function PrivacyScreen() {
       </View>
 
       <Button label="Hapus semua data" variant="secondary" onPress={() => setStep('confirm')} />
+      {deleteFailed ? <Text muted>Belum berhasil menghapus. Kamu bisa coba lagi.</Text> : null}
 
       <Sheet
         visible={step === 'confirm'}

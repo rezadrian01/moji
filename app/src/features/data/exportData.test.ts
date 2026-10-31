@@ -12,6 +12,8 @@ import { createTestDb } from '@/db/testing/sqljsDb';
 import { buildExport, shareExport } from './exportData';
 
 const written: { uri: string; content: string }[] = [];
+const events: string[] = [];
+let mockWriteImpl: () => Promise<void> = async () => undefined;
 jest.mock('expo-file-system', () => {
   class File {
     uri: string;
@@ -19,8 +21,10 @@ jest.mock('expo-file-system', () => {
       this.uri = parts.map((p) => (typeof p === 'string' ? p : p.uri)).join('/');
     }
     create() {}
-    write(content: string) {
+    async write(content: string) {
+      await mockWriteImpl();
       written.push({ uri: this.uri, content });
+      events.push('write-done');
     }
   }
   return { File, Paths: { cache: { uri: 'file:///cache' } } };
@@ -32,7 +36,12 @@ let db: Db;
 beforeEach(async () => {
   db = await createTestDb();
   written.length = 0;
+  events.length = 0;
+  mockWriteImpl = async () => undefined;
   jest.clearAllMocks();
+  (Sharing.shareAsync as jest.Mock).mockImplementation(async () => {
+    events.push('share');
+  });
 });
 
 async function seed() {
@@ -106,5 +115,19 @@ describe('shareExport', () => {
       'file:///cache/moji-export-2026-10-31.json',
       expect.objectContaining({ mimeType: 'application/json' }),
     );
+  });
+
+  it('baru membagikan setelah penulisan file selesai', async () => {
+    mockWriteImpl = () => new Promise((resolve) => setTimeout(resolve, 20));
+    await shareExport(db, NOW);
+    expect(events).toEqual(['write-done', 'share']);
+  });
+
+  it('melempar error dan tidak membagikan kalau penulisan gagal', async () => {
+    mockWriteImpl = async () => {
+      throw new Error('disk penuh');
+    };
+    await expect(shareExport(db, NOW)).rejects.toThrow('disk penuh');
+    expect(Sharing.shareAsync).not.toHaveBeenCalled();
   });
 });

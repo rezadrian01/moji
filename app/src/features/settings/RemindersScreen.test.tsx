@@ -71,3 +71,17 @@ it('mengganti hari ringkasan mingguan menjadwalkan ulang di hari itu', async () 
     expect.objectContaining({ trigger: expect.objectContaining({ type: 'weekly', weekday: 6 }) }),
   );
 });
+
+it('menampilkan jam tersimpan di luar daftar chip sebagai terpilih', async () => {
+  await updateSettings(db, { reminderTime: '07:30' });
+  await renderReminders();
+  expect((await screen.findByLabelText('07:30')).props.accessibilityState.selected).toBe(true);
+});
+
+it('menampilkan pesan lembut kalau menyimpan gagal', async () => {
+  await updateSettings(db, { reminderTime: '20:00' });
+  await renderReminders();
+  (Notifications.cancelAllScheduledNotificationsAsync as jest.Mock).mockRejectedValueOnce(new Error('gagal'));
+  await fireEvent.press(await screen.findByLabelText('21:00'));
+  expect(await screen.findByText(/Belum berhasil menyimpan/)).toBeTruthy();
+});

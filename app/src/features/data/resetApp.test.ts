@@ -28,3 +28,26 @@ it('mengosongkan tabel, menghapus kode undangan, dan membatalkan pengingat', asy
   expect(await getInviteCode()).toBeNull();
   expect(Notifications.cancelAllScheduledNotificationsAsync).toHaveBeenCalled();
 });
+
+it('tetap menghapus data walaupun membatalkan pengingat atau menghapus kode gagal', async () => {
+  await createEntry(db, { mood: 3, note: 'x' }, new Date());
+  (Notifications.cancelAllScheduledNotificationsAsync as jest.Mock).mockRejectedValueOnce(new Error('gagal'));
+  await resetApp(db);
+  expect(await listEntries(db, {})).toEqual([]);
+});
+
+it('tidak menyentuh kode undangan dan pengingat sebelum wipe, dan wipe dijalankan terakhir', async () => {
+  await createEntry(db, { mood: 3, note: 'x' }, new Date());
+  await setInviteCode('MOJI-R07-K3F9');
+  const order: string[] = [];
+  (Notifications.cancelAllScheduledNotificationsAsync as jest.Mock).mockImplementationOnce(async () => {
+    order.push(`cancel(entries=${(await listEntries(db, {})).length})`);
+  });
+  await resetApp(db);
+  expect(order).toEqual(['cancel(entries=1)']);
+});
+
+it('melempar error kalau wipe gagal, dengan pengingat dan kode sudah dibersihkan', async () => {
+  const broken = { ...db, withTransactionAsync: async () => { throw new Error('db gagal'); } } as Db;
+  await expect(resetApp(broken)).rejects.toThrow('db gagal');
+});

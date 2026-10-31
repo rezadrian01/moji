@@ -61,3 +61,21 @@ it('tombol final nonaktif sampai "HAPUS" diketik, lalu menghapus dan ke onboardi
   expect(await getInviteCode()).toBeNull();
   expect(router.replace).toHaveBeenCalledWith('/onboarding');
 });
+
+it('menampilkan pesan lembut kalau ekspor gagal', async () => {
+  (shareExport as jest.Mock).mockRejectedValueOnce(new Error('gagal tulis'));
+  await fireEvent.press(await screen.findByLabelText('Ekspor data'));
+  expect(await screen.findByText(/File belum bisa dibagikan/)).toBeTruthy();
+});
+
+it('menampilkan pesan dan tidak pindah halaman kalau penghapusan gagal', async () => {
+  db.withTransactionAsync = async () => {
+    throw new Error('db gagal');
+  };
+  await fireEvent.press(await screen.findByLabelText('Hapus semua data'));
+  await fireEvent.press(screen.getByLabelText('Lanjutkan'));
+  await fireEvent.changeText(screen.getByLabelText('Ketik HAPUS untuk mengonfirmasi'), 'HAPUS');
+  await fireEvent.press(screen.getByLabelText('Hapus sekarang'));
+  expect(await screen.findByText('Belum berhasil menghapus. Kamu bisa coba lagi.')).toBeTruthy();
+  expect(router.replace).not.toHaveBeenCalled();
+});
