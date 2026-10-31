@@ -11,15 +11,17 @@ Safety check lokal selalu aktif, berjalan di perangkat, tanpa jaringan dan tanpa
 
 Pola memburuk (`isWorsening`): hanya catatan dalam 7 hari terakhir yang dihitung; ambil sampai 7 terbaru dari itu; true bila >= 5 bermood 1 dan sudah >= 72 jam sejak prompt terakhir. `lastPromptAt` yang tidak bisa dibaca diperlakukan sebagai belum pernah ada prompt.
 
-Peta slang (lihat `SLANG_MAP`): gak/ga/gk/nggak/ngga/enggak/engga/gax/ngak/kagak/ndak/nda/tdk -> tidak; gaada/gada -> tidak ada; pengen/pgn/pingin/mo -> ingin; aja/aj -> saja; udh/udah -> sudah; lg -> lagi; bgt -> banget; org -> orang; gw/gue/gua/saya/aq/ak/aku -> aku; yg -> yang; idup -> hidup; cape -> capek; cepet -> cepat; ilang -> hilang. Kata "mau" sengaja tidak dipetakan.
+Peta slang (lihat `SLANG_MAP`): gak/ga/gk/nggak/ngga/enggak/engga/gax/ngak/kagak/ndak/nda/tdk -> tidak; gaada/gada -> tidak ada; pengen/pgn/pingin/mo -> ingin; aja/aj -> saja; udh/udah -> sudah; lg -> lagi; bgt -> banget; org -> orang; gw/gue/gua/saya/aq/ak/aku -> aku; yg -> yang; idup -> hidup; cape -> capek; cepet -> cepat; ilang/ngilang -> hilang; buat -> untuk. Kata "mau" sengaja tidak dipetakan.
 
 ## Daftar frasa
 
-Sumber kebenaran adalah `app/src/domain/safetyPhrases.ts` (`URGENT_PHRASES`, `CONCERN_PHRASES`); semua frasa dinormalisasi dengan pipeline yang sama saat dimuat.
+Sumber kebenaran adalah `app/src/domain/safetyPhrases.ts` (`URGENT_PHRASES`, `CONCERN_PHRASES`). Frasa disimpan dalam bentuk ternormalisasi: `normalizeText(frasa) === frasa`, dan test `phrase lists` di `safety.test.ts` menjaganya. Karena itu huruf kembar ditulis sudah di-collapse ("cuting", "tidak sangup lagi") dan slang ditulis dalam bentuk baku ("beban untuk semua orang").
 
-**urgent:** bunuh diri, ingin mati, mau mati, mending mati, lebih baik mati, ingin mati saja, mengakhiri hidup, akhiri hidup, tidak ingin hidup, tidak mau hidup lagi, menyakiti diri, nyakitin diri, melukai diri, self harm, sayat tangan, gantung diri, minum obat banyak, overdosis, lompat dari, kys, suicide, bundir, selfharm, suisid, sucide, tidak mau hidup, tidak ingin hidup lagi, mati saja, ingin mampus, tidur selamanya, tidak ingin bangun lagi, dunia lebih baik tanpa aku, andai aku tidak lahir, melukai diriku, ngelukain diri, nyilet, sayat nadi, nyayat nadi, potong nadi, silet tangan, cutting, terjun dari, loncat dari, minum racun, minum baygon, bunuh dirinya, mengakhiri hidupku
+**urgent:** bunuh diri, ingin mati, mau mati, mending mati, lebih baik mati, ingin mati saja, mengakhiri hidup, akhiri hidup, tidak ingin hidup, tidak mau hidup lagi, menyakiti diri, nyakitin diri, melukai diri, self harm, sayat tangan, gantung diri, minum obat banyak, overdosis, lompat dari, kys, suicide, bundir, selfharm, suisid, sucide, tidak mau hidup, tidak ingin hidup lagi, mati saja, ingin mampus, tidur selamanya, tidak ingin bangun lagi, dunia lebih baik tanpa aku, andai aku tidak lahir, melukai diriku, ngelukain diri, nyilet, sayat nadi, nyayat nadi, potong nadi, silet tangan, cuting (cutting), terjun dari, loncat dari, minum racun, minum baygon, bunuh dirinya, mengakhiri hidupku, andai aku tidak ada, seandainya aku tidak ada, mending aku tidak ada, lebih baik aku tidak ada, kalau aku tidak ada pasti lebih baik, kalau aku tidak ada lebih baik, lebih baik kalau aku tidak ada, lebih baik tanpa aku, tidak pernah lahir, tidak pernah dilahirkan, tidak bangun lagi, tidak usah bangun lagi, tidak mau bangun lagi, tidak ada alasan untuk hidup, tidak ada alasan hidup, tidak ada alasan lagi untuk hidup, akhiri semuanya, mengakhiri semuanya, akhirin semuanya, akhiri semua ini, mengakhiri semua ini, ingin semuanya berakhir, mau semuanya berakhir, ingin semua berakhir, mau semua berakhir, ingin pergi selamanya, mau pergi selamanya, ingin pergi untuk selamanya, mau pergi untuk selamanya, surat perpisahan
 
-**concern:** tidak kuat lagi, capek hidup, lelah hidup, putus asa, tidak ada harapan, tidak ada gunanya, aku tidak berguna, jadi beban, beban buat semua orang, ingin menghilang, ingin hilang saja, tidak ada yang peduli, sendirian banget, hancur banget, tidak sanggup lagi, nyerah, menyerah saja, tidak ada gunanya hidup, tidak berguna, tidak berarti, benci diri sendiri, capek banget hidup, males hidup, muak hidup, bosan hidup, ingin lenyap, ingin hilang, ingin menghilang selamanya, tidak ada yang sayang, tidak ada yang butuh aku, merepotkan semua orang
+**concern:** tidak kuat lagi, capek hidup, lelah hidup, putus asa, tidak ada harapan, tidak ada gunanya, aku tidak berguna, jadi beban, beban untuk semua orang, ingin menghilang, ingin hilang saja, tidak ada yang peduli, sendirian banget, hancur banget, tidak sangup lagi (sanggup), nyerah, menyerah saja, tidak ada gunanya hidup, tidak berguna, tidak berarti, benci diri sendiri, capek banget hidup, males hidup, muak hidup, bosan hidup, ingin lenyap, ingin hilang, ingin menghilang selamanya, tidak ada yang sayang, tidak ada yang butuh aku, merepotkan semua orang, ingin udahan, mau udahan
+
+Contoh yang terdeteksi: "andai gue ga ada", "kalau aku ga ada pasti lebih baik", "lebih baik aku tidak pernah lahir", "pengen tidur dan ga bangun lagi", "gak ada alasan buat hidup", "aku mau akhiri semuanya", "pengen semuanya berakhir", "pengen pergi selamanya", "surat perpisahan" -> `urgent`; "pengen udahan", "pengen ngilang" -> `concern`.
 
 ## False positive yang diterima
 
@@ -27,6 +29,10 @@ Sengaja dibiarkan karena yang muncul hanya tawaran bantuan yang lembut, dan tes 
 
 - "mau mati lampu" -> `urgent` (cocok dengan frasa "mau mati").
 - "aku tidak mau mati" -> `urgent` (frasa "mau mati" tetap cocok; negasi tidak dibaca).
+- "tidak bangun lagi" sengaja dibuat luas, jadi kalimat soal ketiduran bisa memicu tawaran bantuan.
+- "surat perpisahan" juga cocok untuk surat perpisahan sekolah atau kantor.
+
+Frasa "aku tidak ada" hanya memicu bersama pemicu keinginan (andai, seandainya, mending, lebih baik, kalau ... lebih baik), jadi "aku ga ada waktu" tetap `none`. "Semuanya berakhir" hanya memicu bersama ingin/mau, jadi "libur akhirnya berakhir" tetap `none`.
 
 Sebaliknya "mati lampu lagi", "lampu kos mati lagi", dan "mau mati gaya" -> `none`.
 
@@ -44,6 +50,6 @@ Sebaliknya "mati lampu lagi", "lampu kos mati lagi", dan "mau mati gaya" -> `non
 
 ## Menambah frasa
 
-1. Tambahkan ke `URGENT_PHRASES` atau `CONCERN_PHRASES` di `safetyPhrases.ts`. Tulis dalam bentuk baku (slang sudah dipetakan); daftar dinormalisasi otomatis saat dimuat.
+1. Tambahkan ke `URGENT_PHRASES` atau `CONCERN_PHRASES` di `safetyPhrases.ts`. Tulis dalam bentuk ternormalisasi (slang sudah dipetakan, huruf kembar di-collapse); test `phrase lists` gagal kalau tidak.
 2. Tambahkan kasus tes di `safety.test.ts`: satu yang harus memicu (termasuk varian slang), dan satu kalimat sehari-hari yang mirip yang tidak boleh memicu.
 3. Perbarui daftar di dokumen ini, lalu jalankan `npm test`.
