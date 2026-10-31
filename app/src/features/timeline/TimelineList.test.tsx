@@ -104,4 +104,10 @@ describe('TimelineList', () => {
       expect(EMPTY_COPY).not.toMatch(re);
     }
   });
+
+  it('does not wrap the groups in an entering animation (stale frame overlapped the filter chips on Android)', async () => {
+    await show([entry('a', '2026-11-02T09:00:00+07:00')]);
+    await screen.findByText('Senin, 2 Nov');
+    expect(JSON.stringify(screen.toJSON())).not.toContain('entering');
+  });
 });

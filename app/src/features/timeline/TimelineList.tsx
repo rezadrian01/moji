@@ -105,7 +105,9 @@ export function TimelineList({ entries, filter }: { entries: Entry[]; filter: Co
   }
 
   return (
-    <Animated.View entering={enter} style={{ gap: theme.space(5) }}>
+    // Sengaja tanpa `entering`: di Android, View ber-entering yang sibling-nya (baris chip filter)
+    // muncul setelah data async termuat bisa tertinggal di frame lama dan menimpa chip.
+    <View style={{ gap: theme.space(5) }}>
       {groups.map((g) => (
         <View key={g.key} style={{ gap: theme.space(2) }}>
           <Text variant="heading" accessibilityRole="header">
@@ -116,6 +118,6 @@ export function TimelineList({ entries, filter }: { entries: Entry[]; filter: Co
           ))}
         </View>
       ))}
-    </Animated.View>
+    </View>
   );
 }
